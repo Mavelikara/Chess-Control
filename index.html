@@ -377,7 +377,13 @@ tr.tickedRow td{background:#f1f8f2;color:#7a7a7a}
       <button class="ff" data-res="+ / -">White wins, black absent</button>
       <button class="ff" data-res="- / +">Black wins, white absent</button>
     </div>
-    <div class="flagBtns">
+    <div class="resgrid" id="mdByeRes" style="display:none">
+      <button data-bye="1 - 0">Full point (1)</button>
+      <button data-bye="&#189; - &#189;">Half point (&#189;)</button>
+      <button data-bye="0 - 1">No point (0)</button>
+      <button class="ff" data-bye="">Clear</button>
+    </div>
+    <div class="flagBtns" id="mdFlagRow">
       <button class="flagBtnW" id="mdFlagW">&#9873; Flag White (0)</button>
       <button class="flagBtnB" id="mdFlagB">&#9873; Flag Black (0)</button>
     </div>
@@ -443,6 +449,12 @@ function clearMsg(id){var e=$(id);if(e){e.className='msg';e.textContent='';}}
 function detach(){unsub.forEach(function(f){try{f();}catch(e){}});unsub=[];}
 function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
 function pad2(n){return (n<10?'0':'')+n;}
+function byeLabel(res){
+  if(res==='1 - 0')return '1 pt';
+  if(res==='\u00bd - \u00bd')return '\u00bd pt';
+  if(res==='0 - 1')return '0 pt';
+  return '—';
+}
 function flagStr(n){n=n||0;if(!n)return '';var s='';for(var i=0;i<n;i++)s+='\u2691';return ' <span class="flagIcon">'+s+'</span>';}
 
 /* ---------- boot ---------- */
@@ -727,28 +739,42 @@ function parsePairing(raw){
   raw.split(/\r?\n/).forEach(function(line){
     if(!line.trim())return;
     if(/chess-?results|swiss-?manager/i.test(line))return;
+    if(/^\s*(bo\.?|board)\b/i.test(line))return;          /* header row */
     var board=null,white='',black='',bye=false;
+    var hasBye=/\bbye\b/i.test(line);
+
     if(line.indexOf('\t')!==-1){
       var cells=line.split('\t').map(function(c){return c.trim();});
-      if(!/^\d+$/.test(cells[0]))return;
-      board=parseInt(cells[0],10);
       var names=cells.slice(1).filter(function(c){return !isNoise(c);});
-      if(/\bbye\b/i.test(line)&&names.length===1){white=names[0];bye=true;}
-      else if(names.length>=2){white=names[0];black=names[names.length-1];}
+      if(/^\d+$/.test(cells[0]))board=parseInt(cells[0],10);
+      /* Chess-Results prints a bye with NO board number - do not drop it */
+      if(hasBye&&names.length>=1){white=names[0];bye=true;}
+      else if(board&&names.length>=2){white=names[0];black=names[names.length-1];}
       else return;
     }else{
       var m=line.match(/^\s*(\d+)[\s.)\-:]+(.+?)\s+(?:-|–|vs\.?)\s+(.+?)\s*$/i);
       if(m){board=parseInt(m[1],10);white=m[2].trim();black=m[3].trim();}
       else{
-        var b2=line.match(/^\s*(\d+)[\s.)\-:]+(.+?)\s+bye\s*$/i);
-        if(b2){board=parseInt(b2[1],10);white=b2[2].trim();bye=true;}
+        var b2=line.match(/^\s*(?:(\d+)[\s.)\-:]+)?(.+?)\s*[-–]?\s*bye\s*$/i);
+        if(b2&&b2[2]&&/[a-zA-Z]/.test(b2[2])){
+          if(b2[1])board=parseInt(b2[1],10);
+          white=b2[2].replace(/[-–\s]+$/,'').trim();bye=true;
+        }
         else return;
       }
     }
-    if(!board)return;
     if(/^bye$/i.test(black)){black='';bye=true;}
+    if(!white)return;
     out.push({board:board,white:white,black:black,bye:bye});
   });
+  /* give any bye that arrived without a board number the next free number,
+     so it is visible on the board list rather than silently missing */
+  var used={},maxB=0;
+  out.forEach(function(o){if(o.board){used[o.board]=1;if(o.board>maxB)maxB=o.board;}});
+  out.forEach(function(o){
+    if(!o.board){maxB++;while(used[maxB])maxB++;o.board=maxB;used[maxB]=1;}
+  });
+  out.sort(function(a,b){return a.board-b.board;});
   return out;
 }
 $('prCheckBtn').addEventListener('click',function(){
@@ -790,7 +816,7 @@ $('prSaveBtn').addEventListener('click',function(){
       gameId:gid,tournament:T.code,round:rnd,board:p.board,
       white:p.white,black:p.black,
       isBye:!!p.bye,           /* always written, so a stale bye cannot survive */
-      result:p.bye?'1 - 0':'',
+      result:p.bye?'1 - 0':'',   /* full point by default - adjustable on the board */
       note:'',updatedBy:me.username
     },{merge:true});
   });
@@ -861,7 +887,7 @@ function openBoards(round){
         d.className='bcard'+(g.result?' scored':'')+(g.isBye?' byeb':'');
         d.setAttribute('data-gid',g.gameId);
         var w=esc(g.white||'(not set)');
-        var b=g.isBye?'<i style="color:#999">bye</i>':esc(g.black||'(not set)');
+        var b=g.isBye?'<i style="color:#999">no opponent this round</i>':esc(g.black||'(not set)');
         var fw=flagStr(g.whiteFlags),fb=flagStr(g.blackFlags);
         var vs=vStatusOf(g);
         if(vs==='ok')d.className+=' agreed';
@@ -870,7 +896,7 @@ function openBoards(round){
         d.innerHTML='<div class="bno">'+pad2(g.board)+'</div>'+
           '<div class="pl">'+w+fw+(g.isBye?'<span class="badge">BYE</span>':'')+
           '<br><span class="vs">vs</span> '+b+fb+'</div>'+
-          '<div class="rs">'+(g.result?esc(g.result):'—')+vtag+'</div>';
+          '<div class="rs">'+(g.isBye?byeLabel(g.result):(g.result?esc(g.result):'—'))+vtag+'</div>';
         list.appendChild(d);
       });
     },function(e){list.innerHTML='<div class="msg err" style="display:block">'+esc(e.message)+'</div>';});
@@ -885,11 +911,19 @@ $('bList').addEventListener('click',function(e){
   db.collection(C.games).doc(gid).get().then(function(d){
     if(!d.exists)return;
     var g=d.data();
-    if(g.isBye){alert('Board '+g.board+' is a bye - there is no result to enter.');return;}
     if(!g.white&&!g.black){alert('This board has no players yet. Import the pairing first.');return;}
     activeGame=g;
-    $('mdTitle').textContent='Board '+pad2(g.board);
-    $('mdSub').textContent=(g.white||'?')+'  vs  '+(g.black||'?');
+    $('mdTitle').textContent='Board '+pad2(g.board)+(g.isBye?' — bye':'');
+    $('mdSub').textContent=g.isBye?(g.white||'?')+' has no opponent this round':(g.white||'?')+'  vs  '+(g.black||'?');
+    /* a bye has no game to score - only how many points it is worth */
+    $('mdRes').style.display=g.isBye?'none':'';
+    $('mdByeRes').style.display=g.isBye?'':'none';
+    $('mdFlagRow').style.display=g.isBye?'none':'';
+    $('mdFlagWarn').style.display=g.isBye?'none':'';
+    $('mdClear').style.display=g.isBye?'none':'';
+    document.querySelectorAll('#mdByeRes button').forEach(function(b){
+      b.classList.toggle('sel',g.isBye&&g.result===b.getAttribute('data-bye'));
+    });
     $('mdNote').value=g.note||'';
     paintFlags(g.whiteFlags||0,g.blackFlags||0);
     clearMsg('mdMsg');
@@ -904,6 +938,10 @@ $('bList').addEventListener('click',function(e){
 $('mdRes').addEventListener('click',function(e){
   var btn=e.target.closest('button[data-res]');if(!btn||!activeGame)return;
   saveResult(btn.getAttribute('data-res'));
+});
+$('mdByeRes').addEventListener('click',function(e){
+  var btn=e.target.closest('button[data-bye]');if(!btn||!activeGame)return;
+  saveResult(btn.getAttribute('data-bye'));
 });
 function saveResult(res){
   if(!activeGame)return;
@@ -1027,6 +1065,7 @@ function drawVerify(){
       games.sort(function(a,b){return (a.board||0)-(b.board||0);});
       var ok=0,iss=0,pend=0,disputes=[];
       games.forEach(function(g){
+        if(g.isBye)return;                 /* no players to ask - nothing to check */
         var st=vStatusOf(g);
         if(st==='ok')ok++;else if(st==='issue'){iss++;disputes.push(g);}else pend++;
       });
@@ -1050,9 +1089,15 @@ function drawVerify(){
       games.forEach(function(g){
         var st=vStatusOf(g);
         var d=document.createElement('div');
-        d.className='bcard'+(st==='ok'?' agreed':'')+(st==='issue'?' differs':'');
+        d.className='bcard'+(g.isBye?' byeb':'')+(st==='ok'?' agreed':'')+(st==='issue'?' differs':'');
+        if(g.isBye){
+          d.innerHTML='<div class="bno">'+pad2(g.board)+'</div>'+
+            '<div class="pl">'+esc(g.white||'?')+'<span class="badge">BYE</span><br><span class="vs">nothing to check</span></div>'+
+            '<div class="rs" style="min-width:56px;text-align:right">'+byeLabel(g.result)+'</div>';
+          list.appendChild(d);return;
+        }
         d.innerHTML='<div class="bno">'+pad2(g.board)+'</div>'+
-          '<div class="pl">'+esc(g.white||'?')+(g.isBye?'<span class="badge">BYE</span>':'<br><span class="vs">vs</span> '+esc(g.black||'?'))+'</div>'+
+          '<div class="pl">'+esc(g.white||'?')+'<br><span class="vs">vs</span> '+esc(g.black||'?')+'</div>'+
           '<div class="rs" style="min-width:56px;text-align:right">'+(g.result?esc(g.result):'&mdash;')+'</div>'+
           (locked
             ? '<div style="flex:none;font-size:11px;font-weight:700;color:#999">'+(st==='ok'?'checked':(st==='issue'?'disputed':'—'))+'</div>'
@@ -1143,7 +1188,7 @@ function drawReport(){
       h+='<tr class="'+(t?'tickedRow':'')+'" data-brow="'+g.board+'">'+
         '<td>'+pad2(g.board)+'</td>'+
         '<td>'+esc(g.white||'?')+(g.isBye?' <i>(bye)</i>':' vs '+esc(g.black||'?'))+'</td>'+
-        '<td><b>'+(g.result?esc(g.result):'&mdash;')+'</b></td>'+
+        '<td><b>'+(g.isBye?byeLabel(g.result)+' bye':(g.result?esc(g.result):'&mdash;'))+'</b></td>'+
         '<td>'+(g.vStatus==='ok'?'<span class="vtag ok">yes</span>':(g.vStatus==='issue'?'<span class="vtag bad">DISPUTED</span>':'<span class="vtag wait">&mdash;</span>'))+'</td>'+
         '<td class="tickCell noprint"><input type="checkbox" data-tick="'+g.board+'"'+(t?' checked':'')+'></td>'+
         '</tr>';
@@ -1172,7 +1217,12 @@ $('repClearTicks').addEventListener('click',function(){
 /* TRF export - FIDE tournament report file, for rating submission
    or loading into Swiss-Manager / Chess-Results. */
 function trfResultChar(res,side,isBye){
-  if(isBye)return side==='w'?'U':'-';       /* pairing-allocated bye */
+  if(isBye){
+    if(side!=='w')return '-';
+    if(res==='\u00bd - \u00bd')return 'H';   /* half-point bye */
+    if(res==='0 - 1')return 'Z';             /* zero-point bye */
+    return 'U';                              /* pairing-allocated full-point bye */
+  }
   if(!res)return 'Z';                        /* not played / unknown */
   if(res==='1 - 0')return side==='w'?'1':'0';
   if(res==='0 - 1')return side==='w'?'0':'1';
