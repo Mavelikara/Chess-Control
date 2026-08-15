@@ -68,6 +68,10 @@ tr.bad td{background:#fce8e6}
 .plrow .nm{flex:1;font-size:14px}
 .plrow button{padding:8px 12px;font-size:12px;font-weight:700;border-radius:7px;border:1px solid #ccc;background:#fff;cursor:pointer}
 .plrow button.on{background:var(--green);color:#fff;border-color:var(--green)}
+.plrow button.wd{background:#c5221f;color:#fff;border-color:#c5221f}
+.plrow.isWd .nm{text-decoration:line-through;color:#999}
+.wdBox{background:#fff6f6;border:1px solid #f3c0be;border-radius:10px;padding:12px;margin-bottom:12px}
+.wdBox h3{color:var(--red);margin:0 0 6px}
 .flagBtns{display:flex;gap:8px;margin-top:10px}
 .flagBtnW{flex:1;padding:11px 8px;font-size:13px;font-weight:700;border:1px solid var(--amber);border-radius:8px;background:#fff8e8;color:#b34000;cursor:pointer}
 .flagBtnB{flex:1;padding:11px 8px;font-size:13px;font-weight:700;border:1px solid #e57373;border-radius:8px;background:#fce4e4;color:#7f0000;cursor:pointer}
@@ -189,7 +193,8 @@ tr.tickedRow td{background:#f1f8f2;color:#7a7a7a}
     <div class="tcard" data-go="stand"><div><div class="nm">Standings</div><div class="sub">Scores and ranking</div></div><div class="go">&#8250;</div></div>
       <div class="tcard admin-only" data-go="players"><div><div class="nm">Players</div><div class="sub">Add or replace the player list</div></div><div class="go">&#8250;</div></div>
       <div class="tcard admin-only" data-go="pair"><div><div class="nm">Pairings</div><div class="sub">Paste a round from Swiss-Manager</div></div><div class="go">&#8250;</div></div>
-      <div class="tcard admin-only" data-go="tools"><div><div class="nm">Reset tools</div><div class="sub">Clear a round or start over</div></div><div class="go">&#8250;</div></div>
+      <div class="tcard admin-only" data-go="reports"><div><div class="nm">Reports</div><div class="sub">Chief arbiter only &middot; crosstable, incidents, audit</div></div><div class="go">&#8250;</div></div>
+    <div class="tcard admin-only" data-go="tools"><div><div class="nm">Reset tools</div><div class="sub">Clear a round or start over</div></div><div class="go">&#8250;</div></div>
     </div>
   </div>
 </div>
@@ -242,8 +247,37 @@ tr.tickedRow td{background:#f1f8f2;color:#7a7a7a}
 <div class="screen" id="scAttend">
   <div class="card">
     <h2>Attendance</h2>
-    <div class="stat"><div><div class="n" id="atPresent">0</div><div class="l">Present</div></div><div><div class="n" id="atAbsent">0</div><div class="l">Not arrived</div></div></div>
+    <p class="hint">Tap <b>Present</b> when a player arrives. If someone phones to say they are not coming, tap <b>Withdrew</b> so the arbiter can take them out of the next pairing.</p>
+    <div class="stat">
+      <div><div class="n" id="atPresent">0</div><div class="l">Present</div></div>
+      <div><div class="n" id="atAbsent">0</div><div class="l">Not arrived</div></div>
+      <div><div class="n" id="atWithdrawn">0</div><div class="l">Withdrew</div></div>
+    </div>
+    <div id="atWdBox"></div>
     <div id="atList"></div>
+  </div>
+</div>
+
+<!-- REPORTS (chief / deputy only) -->
+<div class="screen" id="scReports">
+  <div class="card">
+    <h2 id="rxTitle">Reports</h2>
+    <label>Report</label>
+    <select id="rxPick">
+      <option value="summary">Tournament summary</option>
+      <option value="standings">Final standings</option>
+      <option value="cross">Crosstable (player by round)</option>
+      <option value="results">All results, every round</option>
+      <option value="attend">Attendance and withdrawals</option>
+      <option value="incidents">Incidents, flags and disputes</option>
+      <option value="audit">Audit trail (who entered what)</option>
+    </select>
+    <div class="repBtns noprint" style="margin-top:12px">
+      <button id="rxRefresh">&#8635; Refresh</button>
+      <button id="rxPrint">&#9113; Print</button>
+      <button id="rxCsv">&#8659; Download CSV</button>
+    </div>
+    <div id="rxBody"></div>
   </div>
 </div>
 
@@ -637,6 +671,7 @@ $('scMenu').addEventListener('click',function(e){
   setNav(T.name);
   if(go==='rounds')openRounds();
   else if(go==='attend')openAttendance();
+  else if(go==='reports'){ if(isAdmin())openReports(); }
   else if(go==='verify')openVerify();
   else if(go==='report')openReport();
   else if(go==='stand')openStandings();
@@ -990,29 +1025,254 @@ function openAttendance(){
   var u=db.collection(C.players).where('tournament','==',T.code).onSnapshot(function(snap){
     var arr=[];snap.forEach(function(d){arr.push(d.data());});
     arr.sort(function(a,b){return a.name.localeCompare(b.name);});
-    var pres=arr.filter(function(p){return p.present;}).length;
+    var pres=arr.filter(function(p){return p.present&&!p.withdrawn;}).length;
+    var wd=arr.filter(function(p){return p.withdrawn;});
     $('atPresent').textContent=pres;
-    $('atAbsent').textContent=arr.length-pres;
+    $('atWithdrawn').textContent=wd.length;
+    $('atAbsent').textContent=arr.length-pres-wd.length;
+
+    var box=$('atWdBox');
+    if(wd.length){
+      var h='<div class="wdBox"><h3>'+wd.length+' player(s) have withdrawn</h3>'+
+        '<p class="hint" style="margin:0 0 6px">Tell the arbiter to leave these out of the next pairing.</p>';
+      wd.forEach(function(p){
+        h+='<div style="font-size:13px">&bull; '+esc(p.name)+(p.markedBy?' <span style="color:#888">— logged by '+esc(p.markedBy)+'</span>':'')+'</div>';
+      });
+      box.innerHTML=h+'</div>';
+    } else box.innerHTML='';
+
     list.innerHTML='';
     arr.forEach(function(p){
       var d=document.createElement('div');
-      d.className='plrow';
+      d.className='plrow'+(p.withdrawn?' isWd':'');
       d.innerHTML='<div class="nm">'+esc(p.name)+'</div>'+
-        '<button data-pid="'+p.playerId+'" class="'+(p.present?'on':'')+'">'+(p.present?'Present':'Mark present')+'</button>';
+        '<button data-pid="'+p.playerId+'" class="'+(p.present&&!p.withdrawn?'on':'')+'"'+(p.withdrawn?' disabled':'')+'>'+
+          (p.present&&!p.withdrawn?'Present':'Present')+'</button>'+
+        '<button data-wd="'+p.playerId+'" class="'+(p.withdrawn?'wd':'')+'">'+(p.withdrawn?'Withdrew':'Withdrew')+'</button>';
       list.appendChild(d);
     });
   },function(e){list.innerHTML='<div class="msg err" style="display:block">'+esc(e.message)+'</div>';});
   unsub.push(u);
 }
 $('atList').addEventListener('click',function(e){
-  var b=e.target.closest('button[data-pid]');if(!b)return;
-  var pid=b.getAttribute('data-pid');
-  b.disabled=true;
+  var pb=e.target.closest('button[data-pid]');
+  var wb=e.target.closest('button[data-wd]');
+  if(!pb&&!wb)return;
+  var pid=(pb||wb).getAttribute(pb?'data-pid':'data-wd');
+  (pb||wb).disabled=true;
   db.collection(C.players).doc(pid).get().then(function(d){
+    if(!d.exists)return;
+    var v=d.data();
+    if(pb){
+      /* arriving cancels a withdrawal - people do change their minds */
+      return db.collection(C.players).doc(pid).update({
+        present:!v.present,withdrawn:false,markedBy:me.username,markedAt:new Date().toISOString()
+      });
+    }
+    if(!v.withdrawn&&!confirm(v.name+' has withdrawn from the tournament?'))return;
     return db.collection(C.players).doc(pid).update({
-      present:!d.data().present,markedBy:me.username,markedAt:new Date().toISOString()
+      withdrawn:!v.withdrawn,present:false,markedBy:me.username,markedAt:new Date().toISOString()
     });
-  }).then(function(){b.disabled=false;}).catch(function(err){b.disabled=false;alert('Error: '+err.message);});
+  }).then(function(){(pb||wb).disabled=false;})
+    .catch(function(err){(pb||wb).disabled=false;alert('Error: '+err.message);});
+});
+
+/* ---------- reports (chief arbiter / deputy only) ---------- */
+var rxRows=[],rxName='report';
+
+function openReports(){
+  if(!isAdmin())return;
+  detach();
+  $('rxTitle').textContent=T.name+' — Reports';
+  show('scReports');
+  drawReport2();
+}
+$('rxPick').addEventListener('change',drawReport2);
+$('rxRefresh').addEventListener('click',drawReport2);
+$('rxPrint').addEventListener('click',function(){window.print();});
+
+function tbl(headers,rows,cls){
+  var h='<table'+(cls?' class="'+cls+'"':'')+'><tr>';
+  headers.forEach(function(x){h+='<th>'+x+'</th>';});
+  h+='</tr>';
+  rows.forEach(function(r){
+    h+='<tr>';
+    r.forEach(function(c){h+='<td>'+(c==null?'':c)+'</td>';});
+    h+='</tr>';
+  });
+  return h+'</table>';
+}
+function gather(){
+  return Promise.all([
+    db.collection(C.players).where('tournament','==',T.code).get(),
+    db.collection(C.games).where('tournament','==',T.code).get()
+  ]).then(function(r){
+    var players=[];r[0].forEach(function(d){players.push(d.data());});
+    players.sort(function(a,b){return (a.seed||0)-(b.seed||0);});
+    var games=[];r[1].forEach(function(d){games.push(d.data());});
+    games.sort(function(a,b){return (a.round-b.round)||(a.board-b.board);});
+    return {players:players,games:games};
+  });
+}
+/* score table shared by several reports */
+function tally(games,players){
+  var P={},order=[];
+  function ens(n){if(n&&!P[n]){P[n]={name:n,pts:0,wins:0,opp:[],played:0};order.push(n);}return P[n];}
+  players.forEach(function(p){ens(p.name);});
+  games.forEach(function(g){if(g.white)ens(g.white);if(g.black&&!g.isBye)ens(g.black);});
+  games.forEach(function(g){
+    if(!g.result)return;
+    var W=P[g.white],B=g.isBye?null:P[g.black];
+    var ws=scoreFor(g.result,'w'),bs=scoreFor(g.result,'b');
+    if(W){W.pts+=ws;W.played++;if(ws===1&&!g.isBye)W.wins++;if(B)W.opp.push(B.name);}
+    if(B){B.pts+=bs;B.played++;if(bs===1)B.wins++;if(W)B.opp.push(W.name);}
+  });
+  order.forEach(function(n){P[n].buch=P[n].opp.reduce(function(s,o){return s+(P[o]?P[o].pts:0);},0);});
+  var arr=order.map(function(n){return P[n];});
+  arr.sort(function(a,b){return b.pts-a.pts||b.buch-a.buch||b.wins-a.wins||a.name.localeCompare(b.name);});
+  return arr;
+}
+
+function drawReport2(){
+  var kind=$('rxPick').value,box=$('rxBody');
+  box.innerHTML='<p class="hint">Building&hellip;</p>';
+  gather().then(function(D){
+    var players=D.players,games=D.games;
+    var head=[],rows=[],html='',title='';
+
+    if(kind==='summary'){
+      title='Tournament summary';
+      var byR={};
+      games.forEach(function(g){
+        byR[g.round]=byR[g.round]||{boards:0,done:0,disputed:0,checked:0};
+        byR[g.round].boards++;
+        if(g.result)byR[g.round].done++;
+        if(g.vStatus==='issue')byR[g.round].disputed++;
+        if(g.vStatus==='ok')byR[g.round].checked++;
+      });
+      head=['Round','Boards','Results in','Verified','Disputed','Status'];
+      for(var r=1;r<=T.rounds;r++){
+        var v=byR[r];
+        if(!v){rows.push([r,'—','—','—','—','not paired yet']);continue;}
+        var st=v.disputed?'DISPUTES OUTSTANDING':(v.done===v.boards?'complete':'in progress');
+        rows.push([r,v.boards,v.done+' / '+v.boards,v.checked,v.disputed,st]);
+      }
+      var pres=players.filter(function(p){return p.present&&!p.withdrawn;}).length;
+      var wdn=players.filter(function(p){return p.withdrawn;}).length;
+      html='<p class="hint">'+esc(T.name)+' &middot; '+esc(T.date||'')+' &middot; '+T.rounds+' rounds</p>'+
+        '<p class="hint">Players on list: <b>'+players.length+'</b>'+(players.length?' &middot; present '+pres+' &middot; withdrawn '+wdn:'')+'</p>'+
+        tbl(head,rows);
+    }
+
+    else if(kind==='standings'){
+      title='Final standings';
+      var arr=tally(games,players);
+      head=['Rank','Name','Points','Buchholz','Wins','Games played'];
+      arr.forEach(function(p,i){rows.push([i+1,esc(p.name),p.pts,p.buch,p.wins,p.played]);});
+      html=tbl(head,rows);
+    }
+
+    else if(kind==='cross'){
+      title='Crosstable';
+      var arr=tally(games,players);
+      var rank={};arr.forEach(function(p,i){rank[p.name]=i+1;});
+      var maxR=0;games.forEach(function(g){if(g.round>maxR)maxR=g.round;});
+      head=['#','Name'];
+      for(var i=1;i<=maxR;i++)head.push('R'+i);
+      head.push('Total');
+      arr.forEach(function(p,i){
+        var row=[i+1,esc(p.name)];
+        for(var r=1;r<=maxR;r++){
+          var cell='';
+          games.forEach(function(g){
+            if(g.round!==r)return;
+            if(g.white===p.name){
+              if(g.isBye)cell='bye '+byeLabel(g.result);
+              else cell=(rank[g.black]||'?')+'w '+(g.result?scoreFor(g.result,'w'):'-');
+            } else if(g.black===p.name&&!g.isBye){
+              cell=(rank[g.white]||'?')+'b '+(g.result?scoreFor(g.result,'b'):'-');
+            }
+          });
+          row.push(cell||'—');
+        }
+        row.push(p.pts);
+        rows.push(row);
+      });
+      html='<p class="hint">Each cell shows the opponent\u2019s rank, colour played, and the score.</p>'+tbl(head,rows);
+    }
+
+    else if(kind==='results'){
+      title='All results';
+      head=['Round','Board','White','Black','Result','Entered by','Verified'];
+      games.forEach(function(g){
+        rows.push([g.round,pad2(g.board),esc(g.white||''),g.isBye?'(bye)':esc(g.black||''),
+          g.isBye?byeLabel(g.result)+' bye':(g.result||'—'),esc(g.updatedBy||''),
+          g.vStatus==='ok'?'yes':(g.vStatus==='issue'?'DISPUTED':'')]);
+      });
+      html=tbl(head,rows);
+    }
+
+    else if(kind==='attend'){
+      title='Attendance and withdrawals';
+      if(!players.length)html='<p class="hint">No player list was uploaded for this tournament.</p>';
+      else{
+        head=['#','Name','Status','Logged by','When'];
+        players.forEach(function(p,i){
+          rows.push([i+1,esc(p.name),
+            p.withdrawn?'WITHDREW':(p.present?'Present':'Did not arrive'),
+            esc(p.markedBy||''),esc((p.markedAt||'').replace('T',' ').slice(0,16))]);
+        });
+        html=tbl(head,rows);
+      }
+    }
+
+    else if(kind==='incidents'){
+      title='Incidents, flags and disputes';
+      head=['Round','Board','Players','Type','Detail','Raised by'];
+      games.forEach(function(g){
+        var who=esc(g.white||'?')+(g.isBye?' (bye)':' vs '+esc(g.black||'?'));
+        if(g.whiteFlags)rows.push([g.round,pad2(g.board),who,'Illegal move',g.whiteFlags+' flag(s) against White'+(g.whiteFlags>=3?' — game loss':''),esc(g.updatedBy||'')]);
+        if(g.blackFlags)rows.push([g.round,pad2(g.board),who,'Illegal move',g.blackFlags+' flag(s) against Black'+(g.blackFlags>=3?' — game loss':''),esc(g.updatedBy||'')]);
+        if(g.vStatus==='issue')rows.push([g.round,pad2(g.board),who,'DISPUTED SCORE','screen: '+(g.result||'none')+(g.vClaim&&g.vClaim!=='?'?', players: '+g.vClaim:', players disagree'),esc(g.vBy||'')]);
+        if(g.note)rows.push([g.round,pad2(g.board),who,'Note',esc(g.note),esc(g.updatedBy||'')]);
+        if(g.result==='- / -')rows.push([g.round,pad2(g.board),who,'Double forfeit','neither player scored',esc(g.updatedBy||'')]);
+        if(g.result==='+ / -'||g.result==='- / +')rows.push([g.round,pad2(g.board),who,'Forfeit',g.result==='+ / -'?'Black absent':'White absent',esc(g.updatedBy||'')]);
+      });
+      html=rows.length?tbl(head,rows):'<p class="hint">No incidents recorded. Nothing flagged, disputed or forfeited.</p>';
+    }
+
+    else if(kind==='audit'){
+      title='Audit trail';
+      head=['Round','Board','Players','Result','Entered by','When','Checked by'];
+      games.filter(function(g){return g.updatedBy||g.vBy;}).forEach(function(g){
+        rows.push([g.round,pad2(g.board),
+          esc(g.white||'?')+(g.isBye?' (bye)':' vs '+esc(g.black||'?')),
+          g.result||'—',esc(g.updatedBy||''),
+          esc((g.updatedAt||'').replace('T',' ').slice(0,16)),
+          esc(g.vBy||'')]);
+      });
+      html=rows.length?tbl(head,rows):'<p class="hint">Nothing entered yet.</p>';
+    }
+
+    rxRows=[head].concat(rows.map(function(r){return r.map(function(c){return String(c==null?'':c).replace(/<[^>]*>/g,'');});}));
+    rxName=T.code+'-'+kind;
+    box.innerHTML='<h3 style="margin:14px 0 4px">'+esc(T.name)+' — '+title+'</h3>'+html;
+  }).catch(function(e){box.innerHTML='<div class="msg err" style="display:block">'+esc(e.message)+'</div>';});
+}
+
+$('rxCsv').addEventListener('click',function(){
+  if(!rxRows.length){alert('Nothing to download yet.');return;}
+  var csv=rxRows.map(function(r){
+    return r.map(function(c){
+      c=String(c==null?'':c).replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"').replace(/&mdash;/g,'-');
+      return /[",\n]/.test(c)?'"'+c.replace(/"/g,'""')+'"':c;
+    }).join(',');
+  }).join('\n');
+  var blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8'});
+  var a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);a.download=rxName+'.csv';
+  document.body.appendChild(a);a.click();
+  setTimeout(function(){URL.revokeObjectURL(a.href);a.remove();},1000);
 });
 
 /* ---------- verification desk ----------
