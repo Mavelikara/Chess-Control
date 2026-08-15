@@ -67,6 +67,9 @@ button.btn:disabled{background:#c0c0c0;color:#666;cursor:not-allowed}
 .rbtn .pc{display:block;font-size:11px;color:#888;font-weight:400;margin-top:4px}
 .rbtn.done{border-color:var(--green)}
 .bcard{background:#fff;border-radius:10px;padding:12px 14px;margin-bottom:8px;box-shadow:0 1px 2px rgba(0,0,0,.07);display:flex;align-items:center;gap:12px;cursor:pointer;border-left:4px solid transparent}
+.vsLbl{color:#8a8f98;font-size:11px;text-transform:uppercase;letter-spacing:.5px}
+tr.tapRow{cursor:pointer}
+tr.tapRow:hover td{background:#dfe8f5!important}
 .bcard.alt{background:#f4f7fb}
 .bcard.scored{border-left-color:var(--green);background:#eaf7ea}
 .bcard.scored.alt{background:#e2f2e2}
@@ -1000,24 +1003,25 @@ function openBoards(round){
       var games=[];snap.forEach(function(d){games.push(d.data());});
       games.sort(function(a,b){return (a.board||0)-(b.board||0);});
       if(!games.length){list.innerHTML='<p class="hint">No pairing has been imported for this round yet.<br><br>Go back, then Pairings, to paste it in.</p>';return;}
-      list.innerHTML='';
-      games.forEach(function(g,gi){
-        var d=document.createElement('div');
-        d.className='bcard'+(g.result?' scored':'')+(g.isBye?' byeb':'')+(gi%2?' alt':'');
-        d.setAttribute('data-gid',g.gameId);
-        var w=esc(g.white||'(not set)');
-        var b=g.isBye?'<i style="color:#999">no opponent this round</i>':esc(g.black||'(not set)');
-        var fw=flagStr(g.whiteFlags),fb=flagStr(g.blackFlags);
+      var h='<table><tr><th>Bd</th><th>White vs Black</th><th>Score</th><th>Checked</th></tr>';
+      games.forEach(function(g){
         var vs=vStatusOf(g);
-        if(vs==='ok')d.className+=' agreed';
-        if(vs==='issue')d.className+=' differs';
-        var vtag=vs==='ok'?'<span class="vtag ok">CHECKED</span>':(vs==='issue'?'<span class="vtag bad">DISPUTED</span>':'');
-        d.innerHTML='<div class="bno">'+pad2(g.board)+'</div>'+
-          '<div class="pl">'+w+fw+(g.isBye?'<span class="badge">BYE</span>':'')+
-          '<br><span class="vs">vs</span> '+b+fb+'</div>'+
-          '<div class="rs">'+(g.isBye?byeLabel(g.result):(g.result?esc(g.result):'—'))+vtag+'</div>';
-        list.appendChild(d);
+        var cls=vs==='issue'?'rowDispute':(g.isBye?'rowBye':(g.result?'rowDone':''));
+        var w=esc(g.white||'(not set)')+flagStr(g.whiteFlags);
+        var b=g.isBye?'<i style="color:#8a5300">no opponent this round</i>'
+                     :esc(g.black||'(not set)')+flagStr(g.blackFlags);
+        h+='<tr class="tapRow '+cls+'" data-gid="'+g.gameId+'">'+
+          '<td class="numCell">'+pad2(g.board)+'</td>'+
+          '<td>'+w+(g.isBye?'<span class="badge">BYE</span>':'')+
+            '<br><span class="vsLbl">vs</span> '+b+'</td>'+
+          '<td class="scoreCell'+(g.result?'':' pending')+'">'+
+            (g.isBye?byeLabel(g.result):(g.result?esc(g.result):'tap to enter'))+'</td>'+
+          '<td>'+(vs==='ok'?'<span class="stChip good">&#10003; checked</span>'
+                :(vs==='issue'?'<span class="stChip crit">&#9873; DISPUTED</span>'
+                :'<span class="stChip none">&mdash;</span>'))+'</td>'+
+          '</tr>';
       });
+      list.innerHTML=h+'</table>';
     },function(e){list.innerHTML='<div class="msg err" style="display:block">'+esc(e.message)+'</div>';});
   unsub.push(u);
 }
@@ -1442,28 +1446,33 @@ function drawVerify(){
       } else dz.innerHTML='';
 
       if(!games.length){list.innerHTML='<p class="hint">No pairing imported for round '+rnd+' yet.</p>';return;}
-      list.innerHTML='';
+      var h='<table><tr><th>Bd</th><th>White vs Black</th><th>Score</th><th>Status</th>'+
+        (locked?'':'<th class="noprint">Check</th>')+'</tr>';
       games.forEach(function(g){
         var st=vStatusOf(g);
-        var d=document.createElement('div');
-        d.className='bcard'+(g.isBye?' byeb':'')+(st==='ok'?' agreed':'')+(st==='issue'?' differs':'');
         if(g.isBye){
-          d.innerHTML='<div class="bno">'+pad2(g.board)+'</div>'+
-            '<div class="pl">'+esc(g.white||'?')+'<span class="badge">BYE</span><br><span class="vs">nothing to check</span></div>'+
-            '<div class="rs" style="min-width:56px;text-align:right">'+byeLabel(g.result)+'</div>';
-          list.appendChild(d);return;
+          h+='<tr class="rowBye"><td class="numCell">'+pad2(g.board)+'</td>'+
+            '<td>'+esc(g.white||'?')+'<span class="badge">BYE</span></td>'+
+            '<td class="scoreCell">'+byeLabel(g.result)+'</td>'+
+            '<td><span class="stChip none">nothing to check</span></td>'+
+            (locked?'':'<td class="actCell noprint">&mdash;</td>')+'</tr>';
+          return;
         }
-        d.innerHTML='<div class="bno">'+pad2(g.board)+'</div>'+
-          '<div class="pl">'+esc(g.white||'?')+'<br><span class="vs">vs</span> '+esc(g.black||'?')+'</div>'+
-          '<div class="rs" style="min-width:56px;text-align:right">'+(g.result?esc(g.result):'&mdash;')+'</div>'+
-          (locked
-            ? '<div style="flex:none;font-size:11px;font-weight:700;color:#999">'+(st==='ok'?'checked':(st==='issue'?'disputed':'—'))+'</div>'
-            : '<div style="display:flex;gap:6px;flex:none">'+
-              '<button data-vok="'+g.board+'" style="padding:9px 12px;font-size:15px;font-weight:800;border-radius:8px;border:1px solid '+(st==='ok'?'#188038':'#ccc')+';background:'+(st==='ok'?'#188038':'#fff')+';color:'+(st==='ok'?'#fff':'#188038')+';cursor:pointer">&#10003;</button>'+
-              '<button data-viss="'+g.board+'" style="padding:9px 10px;font-size:12px;font-weight:700;border-radius:8px;border:1px solid '+(st==='issue'?'#c5221f':'#e0b4b2')+';background:'+(st==='issue'?'#c5221f':'#fff6f6')+';color:'+(st==='issue'?'#fff':'#c5221f')+';cursor:pointer">&#9873;</button>'+
-            '</div>');
-        list.appendChild(d);
+        var cls=st==='ok'?'rowDone':(st==='issue'?'rowDispute':'');
+        h+='<tr class="'+cls+'"><td class="numCell">'+pad2(g.board)+'</td>'+
+          '<td>'+esc(g.white||'?')+'<br><span class="vsLbl">vs</span> '+esc(g.black||'?')+'</td>'+
+          '<td class="scoreCell'+(g.result?'':' pending')+'">'+(g.result?esc(g.result):'not in yet')+'</td>'+
+          '<td>'+(st==='ok'?'<span class="stChip good">&#10003; confirmed</span>'
+                :(st==='issue'?'<span class="stChip crit">&#9873; ISSUE RAISED</span>'
+                :'<span class="stChip none">not checked</span>'))+'</td>'+
+          (locked?''
+            :'<td class="actCell noprint">'+
+              '<button data-vok="'+g.board+'" class="'+(st==='ok'?'on':'')+'">&#10003;</button>'+
+              '<button data-viss="'+g.board+'" class="'+(st==='issue'?'wd':'')+'">&#9873;</button>'+
+             '</td>')+
+          '</tr>';
       });
+      list.innerHTML=h+'</table>';
     },function(e){list.innerHTML='<div class="msg err" style="display:block">'+esc(e.message)+'</div>';});
   unsub.push(u);
 }
