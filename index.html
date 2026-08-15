@@ -68,6 +68,31 @@ tr.bad td{background:#fce8e6}
 .plrow .nm{flex:1;font-size:14px}
 .plrow button{padding:8px 12px;font-size:12px;font-weight:700;border-radius:7px;border:1px solid #ccc;background:#fff;cursor:pointer}
 .plrow button.on{background:var(--green);color:#fff;border-color:var(--green)}
+.flagBtns{display:flex;gap:8px;margin-top:10px}
+.flagBtnW{flex:1;padding:11px 8px;font-size:13px;font-weight:700;border:1px solid var(--amber);border-radius:8px;background:#fff8e8;color:#b34000;cursor:pointer}
+.flagBtnB{flex:1;padding:11px 8px;font-size:13px;font-weight:700;border:1px solid #e57373;border-radius:8px;background:#fce4e4;color:#7f0000;cursor:pointer}
+.flagWarning{font-size:12px;color:#c5221f;font-weight:700;margin-top:6px;text-align:center}
+.flagIcon{color:#c5221f;font-size:12px}
+.vstat{display:flex;gap:10px;margin-bottom:12px}
+.vstat div{flex:1;border-radius:10px;padding:11px;text-align:center;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.07)}
+.vstat .n{font-size:20px;font-weight:800}
+.vstat .l{font-size:10px;color:#888;text-transform:uppercase;letter-spacing:.4px}
+.vstat .ok{color:var(--green)}.vstat .bad{color:var(--red)}
+.bcard.agreed{border-left-color:var(--green)}
+.bcard.differs{border-left-color:var(--red);background:#fff6f6}
+.vtag{font-size:10px;font-weight:800;padding:2px 7px;border-radius:4px;margin-left:6px;vertical-align:middle}
+.vtag.ok{background:#e6f4ea;color:#12652a}
+.vtag.bad{background:#fce8e6;color:#a50e0b}
+.vtag.wait{background:#eee;color:#777}
+.disputeBox{background:#fff6f6;border:1px solid #f3c0be;border-radius:10px;padding:12px;margin-bottom:12px}
+.disputeBox h3{color:var(--red);margin:0 0 6px}
+.repHead{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:8px}
+.repHead h3{margin:0;font-size:15px}
+.repBtns{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.repBtns button{flex:1;min-width:110px;padding:11px 8px;font-size:13px;font-weight:600;border:1px solid #ccc;border-radius:8px;background:#fff;cursor:pointer;margin:0;color:#111;width:auto}
+td.tickCell{text-align:center;width:44px}
+td.tickCell input{width:20px;height:20px}
+tr.tickedRow td{background:#f1f8f2;color:#7a7a7a}
 .stat{display:flex;gap:14px;margin-bottom:10px}
 .stat div{flex:1;background:#fff;border-radius:10px;padding:12px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,.07)}
 .stat .n{font-size:22px;font-weight:800}
@@ -159,7 +184,9 @@ tr.bad td{background:#fce8e6}
     <div class="tlist">
       <div class="tcard" data-go="rounds"><div><div class="nm">Rounds &amp; results</div><div class="sub">Enter game results</div></div><div class="go">&#8250;</div></div>
       <div class="tcard" data-go="attend"><div><div class="nm">Attendance</div><div class="sub">Who has arrived</div></div><div class="go">&#8250;</div></div>
-      <div class="tcard" data-go="stand"><div><div class="nm">Standings</div><div class="sub">Scores and ranking</div></div><div class="go">&#8250;</div></div>
+      <div class="tcard" data-go="verify"><div><div class="nm">Verify scores</div><div class="sub">Second check from the players themselves</div></div><div class="go">&#8250;</div></div>
+    <div class="tcard" data-go="report"><div><div class="nm">Round report</div><div class="sub">Tick off scores as you relay them &middot; print &middot; export</div></div><div class="go">&#8250;</div></div>
+    <div class="tcard" data-go="stand"><div><div class="nm">Standings</div><div class="sub">Scores and ranking</div></div><div class="go">&#8250;</div></div>
       <div class="tcard admin-only" data-go="players"><div><div class="nm">Players</div><div class="sub">Add or replace the player list</div></div><div class="go">&#8250;</div></div>
       <div class="tcard admin-only" data-go="pair"><div><div class="nm">Pairings</div><div class="sub">Paste a round from Swiss-Manager</div></div><div class="go">&#8250;</div></div>
       <div class="tcard admin-only" data-go="tools"><div><div class="nm">Reset tools</div><div class="sub">Clear a round or start over</div></div><div class="go">&#8250;</div></div>
@@ -220,6 +247,42 @@ tr.bad td{background:#fce8e6}
   </div>
 </div>
 
+<!-- VERIFY -->
+<div class="screen" id="scVerify">
+  <div class="card">
+    <div class="repHead">
+      <h3 id="vTitle">Verify scores</h3>
+      <select id="vRound" style="width:auto;min-width:130px"></select>
+    </div>
+    <div id="vLocked" style="display:none;background:#eef1f5;border-radius:9px;padding:10px 12px;font-size:13px;color:#555;margin-bottom:10px"></div>
+    <p class="hint" id="vHint">As each pair reports to your table, find their board and check the score shown matches what they say. Tap <b>&#10003;</b> if it agrees, or <b>&#9873; Issue</b> if it does not.</p>
+    <div class="vstat">
+      <div><div class="n ok" id="vAgreed">0</div><div class="l">Confirmed</div></div>
+      <div><div class="n bad" id="vDiffer">0</div><div class="l">Issues</div></div>
+      <div><div class="n" id="vPending">0</div><div class="l">Not checked</div></div>
+    </div>
+    <div id="vDisputes"></div>
+    <div id="vList"></div>
+  </div>
+</div>
+
+<!-- ROUND REPORT -->
+<div class="screen" id="scReport">
+  <div class="card">
+    <div class="repHead">
+      <h3 id="repTitle">Round report</h3>
+      <select id="repRound" style="width:auto;min-width:130px"></select>
+    </div>
+    <div class="repBtns noprint">
+      <button id="repRefresh">&#8635; Refresh</button>
+      <button id="repPrint">&#9113; Print</button>
+      <button id="repTRF">&#8659; Export TRF</button>
+      <button id="repClearTicks">Clear ticks</button>
+    </div>
+    <div id="repBody"></div>
+  </div>
+</div>
+
 <!-- STANDINGS -->
 <div class="screen" id="scStand">
   <div class="card">
@@ -273,6 +336,7 @@ tr.bad td{background:#fce8e6}
       <option value="Chief">Chief arbiter - full access</option>
       <option value="Deputy">Deputy - full access</option>
       <option value="Arbiter">Floor arbiter - results and attendance</option>
+      <option value="Verifier">Score verifier - checks results independently</option>
       <option value="Attendance">Attendance desk only</option>
     </select>
     <button class="btn green" id="uAddBtn">Add person</button>
@@ -281,6 +345,24 @@ tr.bad td{background:#fce8e6}
 </div>
 
 </div><!-- /wrap -->
+
+<!-- VERIFY MODAL -->
+<div id="vModalBack" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:50;align-items:center;justify-content:center;padding:14px">
+  <div class="modal">
+    <h3 id="vmTitle"></h3>
+    <div class="msub" id="vmSub"></div>
+    <p class="hint">The screen shows <b id="vmShown"></b>. What do the players say it should be?</p>
+    <div class="resgrid" id="vmRes">
+      <button data-res="1 - 0">1 - 0</button>
+      <button data-res="0 - 1">0 - 1</button>
+      <button data-res="&#189; - &#189;">&#189; - &#189;</button>
+      <button data-res="- / -">- / -</button>
+      <button class="ff" data-res="?">Not sure &mdash; just flag it</button>
+    </div>
+    <div class="msg" id="vmMsg"></div>
+    <button class="btn grey" id="vmClose">Cancel</button>
+  </div>
+</div>
 
 <!-- RESULT MODAL -->
 <div id="modalBack">
@@ -295,6 +377,11 @@ tr.bad td{background:#fce8e6}
       <button class="ff" data-res="+ / -">White wins, black absent</button>
       <button class="ff" data-res="- / +">Black wins, white absent</button>
     </div>
+    <div class="flagBtns">
+      <button class="flagBtnW" id="mdFlagW">&#9873; Flag White (0)</button>
+      <button class="flagBtnB" id="mdFlagB">&#9873; Flag Black (0)</button>
+    </div>
+    <div class="flagWarning" id="mdFlagWarn"></div>
     <label>Note (optional)</label>
     <input id="mdNote">
     <div class="row2" style="margin-top:12px">
@@ -356,6 +443,7 @@ function clearMsg(id){var e=$(id);if(e){e.className='msg';e.textContent='';}}
 function detach(){unsub.forEach(function(f){try{f();}catch(e){}});unsub=[];}
 function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
 function pad2(n){return (n<10?'0':'')+n;}
+function flagStr(n){n=n||0;if(!n)return '';var s='';for(var i=0;i<n;i++)s+='\u2691';return ' <span class="flagIcon">'+s+'</span>';}
 
 /* ---------- boot ---------- */
 function loadScript(src){
@@ -527,6 +615,7 @@ function openTournament(t){
   document.querySelectorAll('.admin-only').forEach(function(el){el.style.display=isAdmin()?'flex':'none';});
   navStack=[openHome];setNav('Tournaments');
   if(me.role==='Attendance'){openAttendance();return;}
+  if(me.role==='Verifier'){openVerify();return;}
   show('scMenu');
 }
 $('scMenu').addEventListener('click',function(e){
@@ -536,6 +625,8 @@ $('scMenu').addEventListener('click',function(e){
   setNav(T.name);
   if(go==='rounds')openRounds();
   else if(go==='attend')openAttendance();
+  else if(go==='verify')openVerify();
+  else if(go==='report')openReport();
   else if(go==='stand')openStandings();
   else if(go==='players')openPlayers();
   else if(go==='pair')openPair();
@@ -734,18 +825,20 @@ function openRounds(){
   }
   show('scRounds');
   var u=db.collection(C.games).where('tournament','==',T.code).onSnapshot(function(snap){
-    var tot={},done={};
+    var tot={},done={},bad={};
     snap.forEach(function(d){
       var v=d.data();
       tot[v.round]=(tot[v.round]||0)+1;
       if(v.result)done[v.round]=(done[v.round]||0)+1;
+      if(v.vStatus==='issue')bad[v.round]=(bad[v.round]||0)+1;
     });
     for(var r=1;r<=T.rounds;r++){
       var el=$('rp-'+r);if(!el)continue;
-      var t=tot[r]||0,dn=done[r]||0;
-      el.textContent=t?(dn+' / '+t+' done'):'no pairing yet';
+      var t=tot[r]||0,dn=done[r]||0,bd=bad[r]||0;
+      el.innerHTML=t?(dn+' / '+t+' done'+(bd?'<br><b style="color:#c5221f">'+bd+' disputed</b>':'')):'no pairing yet';
       var box=$('rb-'+r);
-      if(box)box.className='rbtn'+(t&&dn===t?' done':'');
+      if(box)box.className='rbtn'+(bd?'':(t&&dn===t?' done':''));
+      if(box&&bd)box.style.borderColor='#c5221f';else if(box)box.style.borderColor='';
     }
   });
   unsub.push(u);
@@ -769,10 +862,15 @@ function openBoards(round){
         d.setAttribute('data-gid',g.gameId);
         var w=esc(g.white||'(not set)');
         var b=g.isBye?'<i style="color:#999">bye</i>':esc(g.black||'(not set)');
+        var fw=flagStr(g.whiteFlags),fb=flagStr(g.blackFlags);
+        var vs=vStatusOf(g);
+        if(vs==='ok')d.className+=' agreed';
+        if(vs==='issue')d.className+=' differs';
+        var vtag=vs==='ok'?'<span class="vtag ok">CHECKED</span>':(vs==='issue'?'<span class="vtag bad">DISPUTED</span>':'');
         d.innerHTML='<div class="bno">'+pad2(g.board)+'</div>'+
-          '<div class="pl">'+w+(g.isBye?'<span class="badge">BYE</span>':'')+
-          '<br><span class="vs">vs</span> '+b+'</div>'+
-          '<div class="rs">'+(g.result?esc(g.result):'—')+'</div>';
+          '<div class="pl">'+w+fw+(g.isBye?'<span class="badge">BYE</span>':'')+
+          '<br><span class="vs">vs</span> '+b+fb+'</div>'+
+          '<div class="rs">'+(g.result?esc(g.result):'—')+vtag+'</div>';
         list.appendChild(d);
       });
     },function(e){list.innerHTML='<div class="msg err" style="display:block">'+esc(e.message)+'</div>';});
@@ -793,6 +891,7 @@ $('bList').addEventListener('click',function(e){
     $('mdTitle').textContent='Board '+pad2(g.board);
     $('mdSub').textContent=(g.white||'?')+'  vs  '+(g.black||'?');
     $('mdNote').value=g.note||'';
+    paintFlags(g.whiteFlags||0,g.blackFlags||0);
     clearMsg('mdMsg');
     document.querySelectorAll('#mdRes button').forEach(function(b){
       b.classList.toggle('sel',g.result===b.getAttribute('data-res'));
@@ -817,6 +916,30 @@ function saveResult(res){
     closeModal();
   }).catch(function(e){msg('mdMsg','Could not save: '+e.message,'err');});
 }
+function paintFlags(wf,bf){
+  $('mdFlagW').innerHTML='\u2691 Flag White ('+wf+')';
+  $('mdFlagB').innerHTML='\u2691 Flag Black ('+bf+')';
+  var w='';
+  if(wf>=2)w+='White: next illegal move = game loss. ';
+  if(bf>=2)w+='Black: next illegal move = game loss.';
+  $('mdFlagWarn').textContent=w;
+}
+function addFlag(side){
+  if(!activeGame)return;
+  var gid=activeGame.gameId,field=side==='w'?'whiteFlags':'blackFlags';
+  db.collection(C.games).doc(gid).get().then(function(d){
+    if(!d.exists)return;
+    var g=d.data(),n=(g[field]||0)+1,upd={};
+    upd[field]=n;upd.updatedBy=me.username;
+    return db.collection(C.games).doc(gid).update(upd).then(function(){
+      activeGame[field]=n;
+      paintFlags(activeGame.whiteFlags||0,activeGame.blackFlags||0);
+    });
+  }).catch(function(e){msg('mdMsg','Could not save flag: '+e.message,'err');});
+}
+$('mdFlagW').addEventListener('click',function(){addFlag('w');});
+$('mdFlagB').addEventListener('click',function(){addFlag('b');});
+
 $('mdClear').addEventListener('click',function(){saveResult('');});
 $('mdClose').addEventListener('click',closeModal);
 $('modalBack').addEventListener('click',function(e){if(e.target===this)closeModal();});
@@ -852,6 +975,283 @@ $('atList').addEventListener('click',function(e){
       present:!d.data().present,markedBy:me.username,markedAt:new Date().toISOString()
     });
   }).then(function(){b.disabled=false;}).catch(function(err){b.disabled=false;alert('Error: '+err.message);});
+});
+
+/* ---------- verification desk ----------
+   A volunteer confirms each score against what the two players say.
+   One tap per board. Anything that does not agree is raised immediately
+   so it can be fixed before the next pairing goes out. */
+var vGame=null,vViewRound=null,vPinned=false,vActiveRound=1;
+function vStatusOf(g){return g.vStatus==='ok'?'ok':(g.vStatus==='issue'?'issue':'');}
+
+function openVerify(){
+  detach();
+  $('vTitle').textContent=T.name;
+  vPinned=false;vViewRound=null;
+  /* A volunteer only ever sees the round being played. Chief and Deputy can
+     look back, but older rounds are read-only so nothing gets changed by
+     mistake once a round is finished and the next pairing is out. */
+  var canBrowse=isAdmin();
+  $('vRound').style.display=canBrowse?'':'none';
+  if(canBrowse)fillRounds('vRound');
+  show('scVerify');
+  drawVerify();
+}
+function drawVerify(){
+  detach();
+  var list=$('vList');list.innerHTML='<p class="hint">Loading&hellip;</p>';
+  var u=db.collection(C.games).where('tournament','==',T.code)
+    .onSnapshot(function(snapAll){
+      /* current round = the highest one that has a pairing loaded */
+      var haveRound={};
+      snapAll.forEach(function(d){var v=d.data();if(v.white)haveRound[v.round]=1;});
+      var rounds=Object.keys(haveRound).map(Number);
+      vActiveRound=rounds.length?Math.max.apply(null,rounds):1;
+      if(!vPinned)vViewRound=vActiveRound;
+      var rnd=vViewRound||vActiveRound;
+      if(isAdmin()&&$('vRound').options.length)$('vRound').value=String(rnd);
+
+      var locked=rnd!==vActiveRound;
+      var lb=$('vLocked');
+      if(locked){
+        lb.style.display='block';
+        lb.innerHTML='<b>Round '+rnd+' is finished.</b> Round '+vActiveRound+' is the one being played now. This is shown for reference only and cannot be changed.';
+        $('vHint').style.display='none';
+      } else {
+        lb.style.display='none';
+        $('vHint').style.display='';
+      }
+      $('vTitle').textContent=T.name+' — Round '+rnd;
+
+      var games=[];snapAll.forEach(function(d){var v=d.data();if(v.round===rnd)games.push(v);});
+      games.sort(function(a,b){return (a.board||0)-(b.board||0);});
+      var ok=0,iss=0,pend=0,disputes=[];
+      games.forEach(function(g){
+        var st=vStatusOf(g);
+        if(st==='ok')ok++;else if(st==='issue'){iss++;disputes.push(g);}else pend++;
+      });
+      $('vAgreed').textContent=ok;$('vDiffer').textContent=iss;$('vPending').textContent=pend;
+
+      var dz=$('vDisputes');
+      if(disputes.length){
+        var dh='<div class="disputeBox"><h3>'+disputes.length+' board(s) need the arbiter</h3>';
+        disputes.forEach(function(g){
+          dh+='<div style="font-size:13px;margin-bottom:5px">Board '+pad2(g.board)+' &mdash; '+esc(g.white||'?')+' vs '+esc(g.black||'?')+
+              '<br><span style="color:#777">screen says <b>'+esc(g.result||'nothing')+'</b>'+
+              (g.vClaim&&g.vClaim!=='?'?', players say <b>'+esc(g.vClaim)+'</b>':', players dispute it')+
+              (g.vBy?' &middot; raised by '+esc(g.vBy):'')+'</span></div>';
+        });
+        dh+='</div>';
+        dz.innerHTML=dh;
+      } else dz.innerHTML='';
+
+      if(!games.length){list.innerHTML='<p class="hint">No pairing imported for round '+rnd+' yet.</p>';return;}
+      list.innerHTML='';
+      games.forEach(function(g){
+        var st=vStatusOf(g);
+        var d=document.createElement('div');
+        d.className='bcard'+(st==='ok'?' agreed':'')+(st==='issue'?' differs':'');
+        d.innerHTML='<div class="bno">'+pad2(g.board)+'</div>'+
+          '<div class="pl">'+esc(g.white||'?')+(g.isBye?'<span class="badge">BYE</span>':'<br><span class="vs">vs</span> '+esc(g.black||'?'))+'</div>'+
+          '<div class="rs" style="min-width:56px;text-align:right">'+(g.result?esc(g.result):'&mdash;')+'</div>'+
+          (locked
+            ? '<div style="flex:none;font-size:11px;font-weight:700;color:#999">'+(st==='ok'?'checked':(st==='issue'?'disputed':'—'))+'</div>'
+            : '<div style="display:flex;gap:6px;flex:none">'+
+              '<button data-vok="'+g.board+'" style="padding:9px 12px;font-size:15px;font-weight:800;border-radius:8px;border:1px solid '+(st==='ok'?'#188038':'#ccc')+';background:'+(st==='ok'?'#188038':'#fff')+';color:'+(st==='ok'?'#fff':'#188038')+';cursor:pointer">&#10003;</button>'+
+              '<button data-viss="'+g.board+'" style="padding:9px 10px;font-size:12px;font-weight:700;border-radius:8px;border:1px solid '+(st==='issue'?'#c5221f':'#e0b4b2')+';background:'+(st==='issue'?'#c5221f':'#fff6f6')+';color:'+(st==='issue'?'#fff':'#c5221f')+';cursor:pointer">&#9873;</button>'+
+            '</div>');
+        list.appendChild(d);
+      });
+    },function(e){list.innerHTML='<div class="msg err" style="display:block">'+esc(e.message)+'</div>';});
+  unsub.push(u);
+}
+$('vRound').addEventListener('change',function(){
+  vViewRound=parseInt(this.value,10)||1;
+  vPinned=(vViewRound!==vActiveRound);
+  drawVerify();
+});
+
+$('vList').addEventListener('click',function(e){
+  var okBtn=e.target.closest('button[data-vok]');
+  var isBtn=e.target.closest('button[data-viss]');
+  if(!okBtn&&!isBtn)return;
+  var rnd=vViewRound||vActiveRound;
+  if(rnd!==vActiveRound)return;              /* finished round - read only */
+  var board=parseInt((okBtn||isBtn).getAttribute(okBtn?'data-vok':'data-viss'),10);
+  var gid=T.code+'-R'+rnd+'-'+pad2(board);
+
+  if(okBtn){
+    db.collection(C.games).doc(gid).get().then(function(d){
+      if(!d.exists)return;
+      var g=d.data();
+      if(!g.result&&!g.isBye){alert('Board '+board+' has no score entered by the arbiter yet, so there is nothing to confirm.');return;}
+      var already=g.vStatus==='ok';
+      return db.collection(C.games).doc(gid).update({
+        vStatus:already?'':'ok',vClaim:'',vBy:already?'':me.username,vAt:new Date().toISOString()
+      });
+    }).catch(function(err){alert('Error: '+err.message);});
+    return;
+  }
+  db.collection(C.games).doc(gid).get().then(function(d){
+    if(!d.exists)return;
+    vGame=d.data();
+    $('vmTitle').textContent='Board '+pad2(vGame.board);
+    $('vmSub').textContent=(vGame.white||'?')+'  vs  '+(vGame.black||'?');
+    $('vmShown').textContent=vGame.result||'nothing yet';
+    clearMsg('vmMsg');
+    $('vModalBack').style.display='flex';
+  });
+});
+$('vmRes').addEventListener('click',function(e){
+  var b=e.target.closest('button[data-res]');if(!b||!vGame)return;
+  var claim=b.getAttribute('data-res');
+  db.collection(C.games).doc(vGame.gameId).update({
+    vStatus:'issue',vClaim:claim,vBy:me.username,vAt:new Date().toISOString()
+  }).then(function(){
+    $('vModalBack').style.display='none';vGame=null;
+  }).catch(function(err){msg('vmMsg','Could not save: '+err.message,'err');});
+});
+$('vmClose').addEventListener('click',function(){$('vModalBack').style.display='none';vGame=null;});
+$('vModalBack').addEventListener('click',function(e){if(e.target===this){this.style.display='none';vGame=null;}});
+
+/* ---------- round report (tick off + print + TRF) ---------- */
+function tickKey(round,board){return 'tick:'+T.code+':'+round+':'+board;}
+function isTicked(round,board){try{return localStorage.getItem(tickKey(round,board))==='1';}catch(e){return false;}}
+function setTicked(round,board,on){try{on?localStorage.setItem(tickKey(round,board),'1'):localStorage.removeItem(tickKey(round,board));}catch(e){}}
+
+function openReport(){
+  detach();
+  $('repTitle').textContent=T.name;
+  fillRounds('repRound');
+  show('scReport');
+  drawReport();
+}
+function drawReport(){
+  var rnd=parseInt($('repRound').value,10)||1;
+  var box=$('repBody');
+  box.innerHTML='<p class="hint">Loading&hellip;</p>';
+  db.collection(C.games).where('tournament','==',T.code).where('round','==',rnd).get().then(function(snap){
+    var games=[];snap.forEach(function(d){games.push(d.data());});
+    games.sort(function(a,b){return (a.board||0)-(b.board||0);});
+    if(!games.length){box.innerHTML='<p class="hint">No pairing imported for round '+rnd+' yet.</p>';return;}
+    var done=games.filter(function(g){return g.result;}).length;
+    var h='<h3 style="margin:6px 0 4px">'+esc(T.name)+' &mdash; Round '+rnd+'</h3>'+
+      '<p class="hint">'+done+' / '+games.length+' reported</p>'+
+      '<table><tr><th>Board</th><th>White vs Black</th><th>Score</th><th>Checked</th><th class="noprint">&#10003;</th></tr>';
+    games.forEach(function(g){
+      var t=isTicked(rnd,g.board);
+      h+='<tr class="'+(t?'tickedRow':'')+'" data-brow="'+g.board+'">'+
+        '<td>'+pad2(g.board)+'</td>'+
+        '<td>'+esc(g.white||'?')+(g.isBye?' <i>(bye)</i>':' vs '+esc(g.black||'?'))+'</td>'+
+        '<td><b>'+(g.result?esc(g.result):'&mdash;')+'</b></td>'+
+        '<td>'+(g.vStatus==='ok'?'<span class="vtag ok">yes</span>':(g.vStatus==='issue'?'<span class="vtag bad">DISPUTED</span>':'<span class="vtag wait">&mdash;</span>'))+'</td>'+
+        '<td class="tickCell noprint"><input type="checkbox" data-tick="'+g.board+'"'+(t?' checked':'')+'></td>'+
+        '</tr>';
+    });
+    h+='</table>';
+    box.innerHTML=h;
+  }).catch(function(e){box.innerHTML='<div class="msg err" style="display:block">'+esc(e.message)+'</div>';});
+}
+$('repRound').addEventListener('change',drawReport);
+$('repRefresh').addEventListener('click',drawReport);
+$('repPrint').addEventListener('click',function(){window.print();});
+$('repBody').addEventListener('change',function(e){
+  var cb=e.target.closest('input[data-tick]');if(!cb)return;
+  var rnd=parseInt($('repRound').value,10)||1;
+  var board=parseInt(cb.getAttribute('data-tick'),10);
+  setTicked(rnd,board,cb.checked);
+  var row=cb.closest('tr');if(row)row.className=cb.checked?'tickedRow':'';
+});
+$('repClearTicks').addEventListener('click',function(){
+  var rnd=parseInt($('repRound').value,10)||1;
+  if(!confirm('Clear all ticks for round '+rnd+'?'))return;
+  for(var b=1;b<=500;b++)setTicked(rnd,b,false);
+  drawReport();
+});
+
+/* TRF export - FIDE tournament report file, for rating submission
+   or loading into Swiss-Manager / Chess-Results. */
+function trfResultChar(res,side,isBye){
+  if(isBye)return side==='w'?'U':'-';       /* pairing-allocated bye */
+  if(!res)return 'Z';                        /* not played / unknown */
+  if(res==='1 - 0')return side==='w'?'1':'0';
+  if(res==='0 - 1')return side==='w'?'0':'1';
+  if(res==='\u00bd - \u00bd')return '=';
+  if(res==='+ / -')return side==='w'?'+':'-';
+  if(res==='- / +')return side==='w'?'-':'+';
+  if(res==='- / -')return '-';
+  return 'Z';
+}
+function padRight(s,n){s=String(s==null?'':s);return s.length>=n?s.substring(0,n):s+new Array(n-s.length+1).join(' ');}
+function padLeft(s,n){s=String(s==null?'':s);return s.length>=n?s.substring(0,n):new Array(n-s.length+1).join(' ')+s;}
+
+function buildTRF(players,games,rounds){
+  var rank={},list=[];
+  players.forEach(function(n,i){rank[n]=i+1;list.push(n);});
+  var byPlayer={};
+  list.forEach(function(n){byPlayer[n]={pts:0,rounds:{}};});
+  games.forEach(function(g){
+    if(!g.white)return;
+    var w=g.white,b=g.isBye?null:g.black;
+    var wc=trfResultChar(g.result,'w',g.isBye);
+    if(byPlayer[w])byPlayer[w].rounds[g.round]={opp:b&&rank[b]?rank[b]:0,col:'w',res:wc};
+    if(b&&byPlayer[b])byPlayer[b].rounds[g.round]={opp:rank[w]||0,col:'b',res:trfResultChar(g.result,'b',false)};
+    if(g.result){
+      if(byPlayer[w])byPlayer[w].pts+=scoreFor(g.result,'w');
+      if(b&&byPlayer[b])byPlayer[b].pts+=scoreFor(g.result,'b');
+    } else if(g.isBye&&byPlayer[w])byPlayer[w].pts+=1;
+  });
+  var order=list.slice().sort(function(a,b){return byPlayer[b].pts-byPlayer[a].pts||rank[a]-rank[b];});
+  var place={};order.forEach(function(n,i){place[n]=i+1;});
+
+  var L=[];
+  L.push('012 '+T.name);
+  L.push('022 Kuwait');
+  L.push('032 KUW');
+  L.push('042 '+(T.date||''));
+  L.push('052 '+(T.date||''));
+  L.push('062 '+list.length);
+  L.push('092 Individual: Swiss-System');
+  L.push('102 '+(me?me.name:''));
+  L.push('132 '+(T.date||''));
+  list.forEach(function(n){
+    var p=byPlayer[n],r=rank[n];
+    var line='001 '+padLeft(r,4)+' '+padRight('',1)+padRight('',3)+' '+padRight(n,33)+' '+
+      padLeft('',4)+' '+padRight('',3)+' '+padRight('',11)+' '+padRight('',10)+' '+
+      padLeft(String(p.pts),4)+' '+padLeft(place[n],4);
+    for(var rd=1;rd<=rounds;rd++){
+      var e=p.rounds[rd];
+      line+='  '+(e?padLeft(e.opp||0,4)+' '+e.col+' '+e.res:padLeft('0000',4)+' - Z');
+    }
+    L.push(line);
+  });
+  return L.join('\n')+'\n';
+}
+$('repTRF').addEventListener('click',function(){
+  var btn=this;btn.disabled=true;
+  Promise.all([
+    db.collection(C.players).where('tournament','==',T.code).get(),
+    db.collection(C.games).where('tournament','==',T.code).get()
+  ]).then(function(r){
+    var seeded=[];r[0].forEach(function(d){seeded.push(d.data());});
+    seeded.sort(function(a,b){return (a.seed||0)-(b.seed||0);});
+    var names=seeded.map(function(p){return p.name;});
+    var games=[];r[1].forEach(function(d){games.push(d.data());});
+    /* anyone who appears in a pairing but was never uploaded still gets a rank */
+    games.forEach(function(g){
+      if(g.white&&names.indexOf(g.white)===-1)names.push(g.white);
+      if(g.black&&!g.isBye&&names.indexOf(g.black)===-1)names.push(g.black);
+    });
+    if(!names.length)throw new Error('Nothing to export yet - import a pairing first.');
+    var txt=buildTRF(names,games,T.rounds);
+    var blob=new Blob([txt],{type:'text/plain'});
+    var a=document.createElement('a');
+    a.href=URL.createObjectURL(blob);
+    a.download=T.code+'-'+(T.date||'')+'.trf';
+    document.body.appendChild(a);a.click();
+    setTimeout(function(){URL.revokeObjectURL(a.href);a.remove();},1000);
+    btn.disabled=false;
+  }).catch(function(e){alert('Export failed: '+e.message);btn.disabled=false;});
 });
 
 /* ---------- standings ---------- */
