@@ -143,11 +143,9 @@ tr.bad td{background:#fce8e6}
     <input id="tCode" placeholder="SJ" autocapitalize="characters">
     <div class="row2">
       <div><label>Date</label><input id="tDate" type="date"></div>
-      <div><label>Number of rounds</label><input id="tRounds" type="number" min="1" max="15" value="5"></div>
+      <div><label>Number of rounds</label><input id="tRounds" type="number" min="1" max="20" value="5"></div>
     </div>
-    <label>Number of players</label>
-    <input id="tPlayers" type="number" min="2" max="200" value="24">
-    <p class="hint" id="boardHint">That makes 12 boards per round.</p>
+    <p class="hint" id="boardHint">You do not need to know the number of players. Add the player list afterwards &mdash; any number &mdash; and the boards follow from the pairings you import.</p>
     <button class="btn green" id="saveTBtn">Create tournament</button>
     <div class="msg" id="setupMsg"></div>
   </div>
@@ -245,9 +243,15 @@ tr.bad td{background:#fce8e6}
     <p class="hint">Boards go back to blank.</p>
     <div class="danger">
       <h3>Start this tournament over</h3>
-      <p class="hint">Deletes every pairing, result and attendance mark for this tournament. The player list and settings stay. Type <b>RESET</b> to enable.</p>
+      <p class="hint">Clears every pairing, result and attendance mark for this tournament. The player list and settings stay. Type <b>RESET</b> to enable.</p>
       <input id="tlConfirm" placeholder="Type RESET">
       <button class="btn red" id="tlReset" disabled>Reset whole tournament</button>
+    </div>
+    <div class="danger">
+      <h3>Delete this tournament</h3>
+      <p class="hint">Removes it completely &mdash; players, boards, results, the lot. Use this to clear away a test tournament. Type <b>DELETE</b> to enable.</p>
+      <input id="tlDelConfirm" placeholder="Type DELETE">
+      <button class="btn red" id="tlDelete" disabled>Delete tournament permanently</button>
     </div>
     <div class="msg" id="tlMsg"></div>
   </div>
@@ -484,47 +488,28 @@ function openHome(){
 }
 $('newTBtn').addEventListener('click',function(){
   $('setupTitle').textContent='New tournament';
-  $('tName').value='';$('tCode').value='';$('tRounds').value='5';$('tPlayers').value='24';
+  $('tName').value='';$('tCode').value='';$('tRounds').value='5';
   $('tDate').value=new Date().toISOString().slice(0,10);
   clearMsg('setupMsg');
   goto(openHome,'Tournaments');show('scSetup');
-});
-$('tPlayers').addEventListener('input',function(){
-  var n=parseInt(this.value,10)||0;
-  $('boardHint').textContent='That makes '+Math.ceil(n/2)+' boards per round.';
 });
 
 $('saveTBtn').addEventListener('click',function(){
   var name=$('tName').value.trim();
   var code=$('tCode').value.trim().toUpperCase().replace(/[^A-Z0-9]/g,'');
   var rounds=parseInt($('tRounds').value,10);
-  var players=parseInt($('tPlayers').value,10);
   var date=$('tDate').value;
   if(!name){msg('setupMsg','Give the tournament a name.','err');return;}
   if(!code){msg('setupMsg','Give it a short code, e.g. SJ.','err');return;}
   if(!rounds||rounds<1){msg('setupMsg','Rounds must be at least 1.','err');return;}
-  if(!players||players<2){msg('setupMsg','Need at least 2 players.','err');return;}
-  var boards=Math.ceil(players/2);
   var btn=this;btn.disabled=true;
   msg('setupMsg','Creating…','ok');
   db.collection(C.tourn).doc(code).get().then(function(d){
     if(d.exists)throw new Error('A tournament with code '+code+' already exists. Use a different code.');
-    var t={code:code,name:name,date:date,rounds:rounds,playerCount:players,boards:boards,createdBy:me.username};
-    return db.collection(C.tourn).doc(code).set(t).then(function(){
-      // create blank boards for every round
-      var batch=db.batch(),n=0;
-      for(var r=1;r<=rounds;r++){
-        for(var b=1;b<=boards;b++){
-          var gid=code+'-R'+r+'-'+pad2(b);
-          batch.set(db.collection(C.games).doc(gid),{
-            gameId:gid,tournament:code,round:r,board:b,
-            white:'',black:'',result:'',isBye:false,note:'',updatedBy:''
-          });
-          n++;
-        }
-      }
-      return batch.commit().then(function(){return t;});
-    });
+    /* No player count, no pre-made boards. Boards are created by the pairing
+       import, so a tournament can be any size and can grow between rounds. */
+    var t={code:code,name:name,date:date,rounds:rounds,playerCount:0,boards:0,createdBy:me.username};
+    return db.collection(C.tourn).doc(code).set(t).then(function(){return t;});
   }).then(function(t){
     btn.disabled=false;
     openTournament(t);
@@ -537,7 +522,8 @@ $('saveTBtn').addEventListener('click',function(){
 function openTournament(t){
   detach();T=t;
   $('menuTitle').textContent=t.name;
-  $('menuSub').textContent=(t.date||'')+' · '+t.rounds+' rounds · '+t.playerCount+' players · '+t.boards+' boards';
+  $('menuSub').textContent=(t.date||'')+' · '+t.rounds+' rounds'+
+    (t.playerCount?' · '+t.playerCount+' players · '+t.boards+' boards':' · players not added yet');
   document.querySelectorAll('.admin-only').forEach(function(el){el.style.display=isAdmin()?'flex':'none';});
   navStack=[openHome];setNav('Tournaments');
   if(me.role==='Attendance'){openAttendance();return;}
@@ -584,7 +570,7 @@ $('plCheckBtn').addEventListener('click',function(){
   $('plSaveBtn').style.display='block';
   var w=[];
   if(dup.length)w.push('Duplicate names: '+dup.join(', '));
-  if(plParsed.length!==T.playerCount)w.push('This list has '+plParsed.length+' players but the tournament is set up for '+T.playerCount+'.');
+  if(T.playerCount&&plParsed.length!==T.playerCount)w.push('This replaces the previous list of '+T.playerCount+' players with '+plParsed.length+'.');
   if(w.length)msg('plMsg',w.join('\n\n'),'warn');
   else msg('plMsg',plParsed.length+' players read. Looks right.','ok');
 });
@@ -602,7 +588,13 @@ $('plSaveBtn').addEventListener('click',function(){
     });
     return batch.commit();
   }).then(function(){
-    msg('plMsg','Saved '+plParsed.length+' players.','ok');btn.disabled=false;
+    /* size follows the list - no fixed limit anywhere */
+    var boards=Math.ceil(plParsed.length/2);
+    T.playerCount=plParsed.length; T.boards=boards;
+    return db.collection(C.tourn).doc(T.code).set({playerCount:plParsed.length,boards:boards},{merge:true});
+  }).then(function(){
+    msg('plMsg','Saved '+plParsed.length+' players. That is '+T.boards+' boards per round.','ok');
+    btn.disabled=false;
   }).catch(function(e){msg('plMsg','Error: '+e.message,'err');btn.disabled=false;});
 });
 
@@ -668,20 +660,21 @@ $('prCheckBtn').addEventListener('click',function(){
   var seen={},dup=[],bad=[];
   prParsed.forEach(function(p){
     if(seen[p.board])dup.push(p.board);seen[p.board]=1;
-    if(p.board<1||p.board>T.boards)bad.push(p.board);
+    if(p.board<1)bad.push(p.board);          /* any positive board number is valid */
   });
   var h='<table><tr><th>Bd</th><th>White</th><th>Black</th></tr>';
   prParsed.forEach(function(p){
-    var isBad=p.board<1||p.board>T.boards;
+    var isBad=p.board<1||dup.indexOf(p.board)!==-1;
     h+='<tr class="'+(isBad?'bad':'')+'"><td>'+p.board+'</td><td>'+esc(p.white||'?')+'</td><td>'+(p.bye?'<i>Bye</i>':esc(p.black||'?'))+'</td></tr>';
   });
   h+='</table>';
   $('prPreview').innerHTML=h;
   $('prSaveBtn').style.display='block';
   var w=[];
-  if(bad.length)w.push('Board numbers outside 1-'+T.boards+': '+bad.join(', ')+' (shown in red).');
-  if(dup.length)w.push('Duplicate board numbers: '+dup.join(', '));
-  if(prParsed.length!==T.boards)w.push('Read '+prParsed.length+' boards, expected '+T.boards+'.');
+  if(bad.length)w.push('Invalid board number(s): '+bad.join(', '));
+  if(dup.length)w.push('The same board number appears twice: '+dup.join(', ')+' (shown in red).');
+  if(T.playerCount&&prParsed.length!==T.boards)
+    w.push('Read '+prParsed.length+' boards. Your player list of '+T.playerCount+' suggests '+T.boards+'. That is fine if some players are absent or have a bye - just check it is what you expect.');
   if(w.length)msg('prMsg',w.join('\n\n'),'warn');
   else msg('prMsg','Read '+prParsed.length+' boards. All correct.','ok');
 });
@@ -704,6 +697,10 @@ $('prSaveBtn').addEventListener('click',function(){
     return db.collection(C.games).where('tournament','==',T.code).where('round','==',rnd).get();
   }).then(function(s){
     var filled=0;s.forEach(function(d){if(d.data().white)filled++;});
+    if(s.size>(T.boards||0)){
+      T.boards=s.size;
+      db.collection(C.tourn).doc(T.code).set({boards:s.size},{merge:true});
+    }
     msg('prMsg','Saved. Round '+rnd+': '+filled+' of '+s.size+' boards now have players.','ok');
     btn.disabled=false;
   }).catch(function(e){msg('prMsg','Error: '+e.message,'err');btn.disabled=false;});
@@ -736,7 +733,7 @@ function openRounds(){
     for(var r=1;r<=T.rounds;r++){
       var el=$('rp-'+r);if(!el)continue;
       var t=tot[r]||0,dn=done[r]||0;
-      el.textContent=dn+' / '+t+' done';
+      el.textContent=t?(dn+' / '+t+' done'):'no pairing yet';
       var box=$('rb-'+r);
       if(box)box.className='rbtn'+(t&&dn===t?' done':'');
     }
@@ -754,7 +751,7 @@ function openBoards(round){
     .onSnapshot(function(snap){
       var games=[];snap.forEach(function(d){games.push(d.data());});
       games.sort(function(a,b){return (a.board||0)-(b.board||0);});
-      if(!games.length){list.innerHTML='<p class="hint">No boards for this round.</p>';return;}
+      if(!games.length){list.innerHTML='<p class="hint">No pairing has been imported for this round yet.<br><br>Go back, then Pairings, to paste it in.</p>';return;}
       list.innerHTML='';
       games.forEach(function(g){
         var d=document.createElement('div');
@@ -892,12 +889,41 @@ $('printBtn').addEventListener('click',function(){window.print();});
 
 /* ---------- reset tools ---------- */
 function openTools(){
-  clearMsg('tlMsg');$('tlConfirm').value='';$('tlReset').disabled=true;
+  clearMsg('tlMsg');
+  $('tlConfirm').value='';$('tlReset').disabled=true;
+  $('tlDelConfirm').value='';$('tlDelete').disabled=true;
   $('toolsWhich').textContent=T.name;
   fillRounds('tlRound');show('scTools');
 }
 $('tlConfirm').addEventListener('input',function(){
   $('tlReset').disabled=this.value.trim().toUpperCase()!=='RESET';
+});
+$('tlDelConfirm').addEventListener('input',function(){
+  $('tlDelete').disabled=this.value.trim().toUpperCase()!=='DELETE';
+});
+$('tlDelete').addEventListener('click',function(){
+  if(!confirm('Permanently delete "'+T.name+'" and everything in it?'))return;
+  var btn=this;btn.disabled=true;msg('tlMsg','Deleting…','ok');
+  var code=T.code;
+  Promise.all([
+    db.collection(C.games).where('tournament','==',code).get(),
+    db.collection(C.players).where('tournament','==',code).get()
+  ]).then(function(r){
+    var all=[];r[0].forEach(function(d){all.push(d.ref);});r[1].forEach(function(d){all.push(d.ref);});
+    var chain=Promise.resolve();
+    for(var i=0;i<all.length;i+=400){
+      (function(part){
+        chain=chain.then(function(){
+          var b=db.batch();part.forEach(function(ref){b.delete(ref);});return b.commit();
+        });
+      })(all.slice(i,i+400));
+    }
+    return chain;
+  }).then(function(){
+    return db.collection(C.tourn).doc(code).delete();
+  }).then(function(){
+    T=null;openHome();
+  }).catch(function(e){msg('tlMsg','Error: '+e.message,'err');btn.disabled=false;});
 });
 function clearRound(full){
   var rnd=parseInt($('tlRound').value,10);
