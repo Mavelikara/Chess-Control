@@ -578,12 +578,22 @@ $('plSaveBtn').addEventListener('click',function(){
   if(!plParsed.length)return;
   var btn=this;btn.disabled=true;msg('plMsg','Saving…','ok');
   db.collection(C.players).where('tournament','==',T.code).get().then(function(s){
+    /* Keep attendance for anyone already on the list, so adding late entries
+       on the morning of the event does not wipe who has already checked in. */
+    var was={};
+    s.forEach(function(d){
+      var v=d.data();
+      was[v.name.trim().toLowerCase()]={present:!!v.present,withdrawn:!!v.withdrawn,markedBy:v.markedBy||'',markedAt:v.markedAt||''};
+    });
     var batch=db.batch();
     s.forEach(function(d){batch.delete(d.ref);});
     plParsed.forEach(function(n,i){
       var pid=T.code+'-P'+pad2(i+1);
+      var prev=was[n.trim().toLowerCase()]||{present:false,withdrawn:false,markedBy:'',markedAt:''};
       batch.set(db.collection(C.players).doc(pid),{
-        playerId:pid,tournament:T.code,name:n,seed:i+1,present:false,withdrawn:false
+        playerId:pid,tournament:T.code,name:n,seed:i+1,
+        present:prev.present,withdrawn:prev.withdrawn,
+        markedBy:prev.markedBy,markedAt:prev.markedAt
       });
     });
     return batch.commit();
@@ -865,6 +875,14 @@ function openStandings(){
     var players={},order=[];
     r[0].forEach(function(d){var p=d.data();players[p.name]={name:p.name,pts:0,wins:0,opp:[],seed:p.seed||999};order.push(p.name);});
     function ensure(n){if(n&&!players[n]){players[n]={name:n,pts:0,wins:0,opp:[],seed:999};order.push(n);}return players[n];}
+    /* Register everyone who appears in a pairing, whether their game has been
+       scored yet or not - otherwise a player with no result yet vanishes from
+       the standings, which matters when no player list has been uploaded. */
+    r[1].forEach(function(d){
+      var g=d.data();
+      if(g.white)ensure(g.white);
+      if(g.black&&!g.isBye)ensure(g.black);
+    });
     r[1].forEach(function(d){
       var g=d.data();if(!g.result)return;
       var W=ensure(g.white),B=g.isBye?null:ensure(g.black);
