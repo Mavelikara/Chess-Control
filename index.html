@@ -12,7 +12,7 @@
   --cat:#2a78d6;--cat-bg:#eaf2fc;
 }
 *{box-sizing:border-box}
-body{margin:0;font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:#f5f6f8;color:#1a1a1a}
+body{margin:0;font-family:Cambria,'Palatino Linotype',Georgia,'Times New Roman',serif;background:#f5f6f8;color:#1a1a1a}
 #topbar{background:#111;color:#fff;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:20}
 #topbar h1{font-size:16px;margin:0;letter-spacing:.5px}
 #topbar .who{font-size:12px;color:#bbb}
@@ -43,8 +43,9 @@ h2{font-size:18px;margin:0 0 12px}
 h3{font-size:14px;margin:0 0 8px}
 p.hint{font-size:13px;color:#666;line-height:1.5;margin:0 0 10px}
 label{display:block;font-size:12px;font-weight:600;margin:10px 0 4px;color:#333}
-input,select,textarea{width:100%;padding:11px;font-size:15px;border:1px solid #ccc;border-radius:8px;background:#fff;font-family:inherit}
-textarea{font-family:monospace;font-size:13px;min-height:150px;resize:vertical}
+input,select,textarea,button{font-family:Cambria,'Palatino Linotype',Georgia,'Times New Roman',serif}
+input,select,textarea{width:100%;padding:11px;font-size:15px;border:1px solid #ccc;border-radius:8px;background:#fff}
+textarea{font-size:14px;min-height:150px;resize:vertical;line-height:1.45}
 button.btn{width:100%;padding:14px;font-size:15px;font-weight:600;border:none;border-radius:9px;cursor:pointer;margin-top:8px;color:#fff;background:var(--blue)}
 button.btn.green{background:var(--green)}
 button.btn.grey{background:#5f6368}
@@ -66,7 +67,9 @@ button.btn:disabled{background:#c0c0c0;color:#666;cursor:not-allowed}
 .rbtn .pc{display:block;font-size:11px;color:#888;font-weight:400;margin-top:4px}
 .rbtn.done{border-color:var(--green)}
 .bcard{background:#fff;border-radius:10px;padding:12px 14px;margin-bottom:8px;box-shadow:0 1px 2px rgba(0,0,0,.07);display:flex;align-items:center;gap:12px;cursor:pointer;border-left:4px solid transparent}
-.bcard.scored{border-left-color:var(--green)}
+.bcard.alt{background:#f4f7fb}
+.bcard.scored{border-left-color:var(--green);background:#eaf7ea}
+.bcard.scored.alt{background:#e2f2e2}
 .bcard.byeb{border-left-color:var(--amber);background:#fffdf5}
 .bcard .bno{font-weight:800;color:#888;width:26px;flex:none;font-size:14px}
 .bcard .pl{flex:1;font-size:14px;line-height:1.45}
@@ -83,10 +86,23 @@ button.btn:disabled{background:#c0c0c0;color:#666;cursor:not-allowed}
 .resgrid button{padding:16px 8px;font-size:16px;font-weight:800;border-radius:9px;border:2px solid var(--line);background:#fafafa;cursor:pointer}
 .resgrid button.ff{font-size:12px;background:#fff8e8;border-color:var(--amber);font-weight:700}
 .resgrid button.sel{border-color:var(--green);background:#e6f4ea}
-table{width:100%;border-collapse:collapse;font-size:13px;margin-top:8px}
-th,td{border:1px solid var(--line);padding:7px 9px;text-align:left}
-th{background:#eef3fb;font-weight:700}
-tr.bad td{background:#fce8e6}
+table{width:100%;border-collapse:collapse;font-size:14px;margin-top:10px;background:#fff}
+th,td{border:1px solid #d7dce3;padding:9px 10px;text-align:left}
+th{background:var(--cat);color:#fff;font-weight:700;font-size:13px;letter-spacing:.3px}
+tbody tr:nth-child(even) td,table tr:nth-child(even) td{background:#f4f7fb}
+table tr:hover td{background:#e8eef7}
+tr.bad td{background:#fce8e6!important}
+tr.rowDone td{background:#eaf7ea!important}
+tr.rowDispute td{background:#fdeaea!important}
+tr.rowBye td{background:#fff7e3!important}
+tr.rowPresent td{background:#eaf7ea!important}
+tr.rowWithdrew td{background:#fdeaea!important}
+tr.rowWithdrew td:nth-child(2){text-decoration:line-through;color:#8f1f1f}
+td.actCell{width:1%;white-space:nowrap;text-align:right}
+td.actCell button{padding:7px 13px;font-size:13px;font-weight:700;border-radius:7px;border:1px solid #b9c2cd;background:#fff;cursor:pointer;margin-left:5px}
+td.actCell button.on{background:var(--green);color:#fff;border-color:var(--green)}
+td.actCell button.wd{background:var(--red);color:#fff;border-color:var(--red)}
+td.numCell{width:1%;white-space:nowrap;color:#777;font-weight:700}
 .plrow{display:flex;align-items:center;gap:9px;padding:9px 0;border-bottom:1px solid #eee}
 .plrow .nm{flex:1;font-size:14px}
 .plrow button{padding:8px 12px;font-size:12px;font-weight:700;border-radius:7px;border:1px solid #ccc;background:#fff;cursor:pointer}
@@ -226,7 +242,7 @@ tr.tickedRow td{background:#f1f8f2;color:#7a7a7a}
 <!-- PLAYERS -->
 <div class="screen" id="scPlayers">
   <div class="card">
-    <h2>Players</h2>
+    <h2 id="plHeading">Players</h2>
     <p class="hint">One name per line. This replaces the whole list for this tournament. Do this before importing pairings.</p>
     <textarea id="plPaste" placeholder="Eden George Eldho&#10;David Boney Varghese&#10;Adel Joseph"></textarea>
     <button class="btn" id="plCheckBtn">Check list</button>
@@ -239,7 +255,7 @@ tr.tickedRow td{background:#f1f8f2;color:#7a7a7a}
 <!-- PAIRINGS -->
 <div class="screen" id="scPair">
   <div class="card">
-    <h2>Import pairings</h2>
+    <h2 id="prHeading">Import pairings</h2>
     <label>Round</label>
     <select id="prRound"></select>
     <p class="hint">Copy the round from Swiss-Manager or Chess-Results and paste below. Or type one line per board:<br><code>1 White Name - Black Name</code></p>
@@ -270,7 +286,7 @@ tr.tickedRow td{background:#f1f8f2;color:#7a7a7a}
 <!-- ATTENDANCE -->
 <div class="screen" id="scAttend">
   <div class="card">
-    <h2>Attendance</h2>
+    <h2 id="atHeading">Attendance</h2>
     <p class="hint">Tap <b>Present</b> when a player arrives. If someone phones to say they are not coming, tap <b>Withdrew</b> so the arbiter can take them out of the next pairing.</p>
     <div class="stat">
       <div><div class="n" id="atPresent">0</div><div class="l">Present</div></div>
@@ -279,6 +295,7 @@ tr.tickedRow td{background:#f1f8f2;color:#7a7a7a}
     </div>
     <div id="atWdBox"></div>
     <div id="atList"></div>
+    <p class="hint noprint" style="margin-top:10px">Green = arrived &middot; red = withdrew &middot; plain = not here yet.</p>
   </div>
 </div>
 
@@ -354,7 +371,7 @@ tr.tickedRow td{background:#f1f8f2;color:#7a7a7a}
 <!-- TOOLS -->
 <div class="screen" id="scTools">
   <div class="card">
-    <h2>Reset tools</h2>
+    <h2 id="tlHeading">Reset tools</h2>
     <p class="hint">These only affect <b id="toolsWhich"></b>. No other tournament is touched.</p>
     <label>Round</label>
     <select id="tlRound"></select>
@@ -743,7 +760,7 @@ $('usersBtn').addEventListener('click',function(){
 /* ---------- players ---------- */
 var plParsed=[];
 function openPlayers(){
-  setCtx(null,'PLAYERS');clearMsg('plMsg');$('plPreview').innerHTML='';$('plSaveBtn').style.display='none';
+  setCtx(null,'PLAYERS');$('plHeading').textContent=T.name+' — Players';clearMsg('plMsg');$('plPreview').innerHTML='';$('plSaveBtn').style.display='none';
   show('scPlayers');
   db.collection(C.players).where('tournament','==',T.code).get().then(function(s){
     var names=[];s.forEach(function(d){names.push(d.data());});
@@ -811,10 +828,20 @@ function fillRounds(sel){
     var o=document.createElement('option');o.value=r;o.textContent='Round '+r;s.appendChild(o);
   }
 }
-function openPair(){
-  setCtx(null,'PAIRINGS');clearMsg('prMsg');$('prPreview').innerHTML='';$('prSaveBtn').style.display='none';
-  $('prPaste').value='';fillRounds('prRound');show('scPair');
+function prHead(){
+  var r=parseInt($('prRound').value,10)||1;
+  $('prHeading').textContent=T.name+' — Import Round '+r;
+  setCtx(r,'IMPORT PAIRING');
 }
+function openPair(){
+  clearMsg('prMsg');$('prPreview').innerHTML='';$('prSaveBtn').style.display='none';
+  $('prPaste').value='';fillRounds('prRound');show('scPair');
+  prHead();
+}
+$('prRound').addEventListener('change',function(){
+  prHead();
+  $('prPreview').innerHTML='';$('prSaveBtn').style.display='none';clearMsg('prMsg');
+});
 function isNoise(s){
   s=(s||'').trim();
   if(!s)return true;
@@ -974,9 +1001,9 @@ function openBoards(round){
       games.sort(function(a,b){return (a.board||0)-(b.board||0);});
       if(!games.length){list.innerHTML='<p class="hint">No pairing has been imported for this round yet.<br><br>Go back, then Pairings, to paste it in.</p>';return;}
       list.innerHTML='';
-      games.forEach(function(g){
+      games.forEach(function(g,gi){
         var d=document.createElement('div');
-        d.className='bcard'+(g.result?' scored':'')+(g.isBye?' byeb':'');
+        d.className='bcard'+(g.result?' scored':'')+(g.isBye?' byeb':'')+(gi%2?' alt':'');
         d.setAttribute('data-gid',g.gameId);
         var w=esc(g.white||'(not set)');
         var b=g.isBye?'<i style="color:#999">no opponent this round</i>':esc(g.black||'(not set)');
@@ -1077,7 +1104,7 @@ function closeModal(){$('modalBack').classList.remove('on');activeGame=null;}
 
 /* ---------- attendance ---------- */
 function openAttendance(){
-  detach();setCtx(null,'ATTENDANCE');show('scAttend');
+  detach();setCtx(null,'ATTENDANCE');$('atHeading').textContent=T.name+' — Attendance';show('scAttend');
   var list=$('atList');list.innerHTML='<p class="hint">Loading…</p>';
   var u=db.collection(C.players).where('tournament','==',T.code).onSnapshot(function(snap){
     var arr=[];snap.forEach(function(d){arr.push(d.data());});
@@ -1098,16 +1125,21 @@ function openAttendance(){
       box.innerHTML=h+'</div>';
     } else box.innerHTML='';
 
-    list.innerHTML='';
-    arr.forEach(function(p){
-      var d=document.createElement('div');
-      d.className='plrow'+(p.withdrawn?' isWd':'');
-      d.innerHTML='<div class="nm">'+esc(p.name)+'</div>'+
-        '<button data-pid="'+p.playerId+'" class="'+(p.present&&!p.withdrawn?'on':'')+'"'+(p.withdrawn?' disabled':'')+'>'+
-          (p.present&&!p.withdrawn?'Present':'Present')+'</button>'+
-        '<button data-wd="'+p.playerId+'" class="'+(p.withdrawn?'wd':'')+'">'+(p.withdrawn?'Withdrew':'Withdrew')+'</button>';
-      list.appendChild(d);
+    var h='<table><tr><th>#</th><th>Player</th><th>Status</th><th class="noprint">Mark</th></tr>';
+    arr.forEach(function(p,i){
+      var cls=p.withdrawn?'rowWithdrew':(p.present?'rowPresent':'');
+      h+='<tr class="'+cls+'">'+
+        '<td class="numCell">'+(i+1)+'</td>'+
+        '<td>'+esc(p.name)+'</td>'+
+        '<td>'+(p.withdrawn?'<span class="stChip crit">&#9873; WITHDREW</span>'
+              :(p.present?'<span class="stChip good">&#10003; arrived</span>'
+              :'<span class="stChip none">not here yet</span>'))+'</td>'+
+        '<td class="actCell noprint">'+
+          '<button data-pid="'+p.playerId+'" class="'+(p.present&&!p.withdrawn?'on':'')+'"'+(p.withdrawn?' disabled':'')+'>Present</button>'+
+          '<button data-wd="'+p.playerId+'" class="'+(p.withdrawn?'wd':'')+'">Withdrew</button>'+
+        '</td></tr>';
     });
+    list.innerHTML=h+'</table>';
   },function(e){list.innerHTML='<div class="msg err" style="display:block">'+esc(e.message)+'</div>';});
   unsub.push(u);
 }
@@ -1383,7 +1415,7 @@ function drawVerify(){
         lb.style.display='none';
         $('vHint').style.display='';
       }
-      $('vTitle').textContent=T.name+' — Round '+rnd;
+      $('vTitle').textContent=T.name+' — Verify Round '+rnd;
       setCtx(rnd,locked?'CLOSED':'VERIFYING');
 
       var games=[];snapAll.forEach(function(d){var v=d.data();if(v.round===rnd)games.push(v);});
@@ -1687,7 +1719,7 @@ $('printBtn').addEventListener('click',function(){window.print();});
 
 /* ---------- reset tools ---------- */
 function openTools(){
-  setCtx(null,'RESET TOOLS');clearMsg('tlMsg');
+  setCtx(null,'RESET TOOLS');$('tlHeading').textContent=T.name+' — Reset tools';clearMsg('tlMsg');
   $('tlConfirm').value='';$('tlReset').disabled=true;
   $('tlDelConfirm').value='';$('tlDelete').disabled=true;
   $('toolsWhich').textContent=T.name;
