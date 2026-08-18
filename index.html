@@ -58,10 +58,24 @@ button.btn:disabled{background:#c0c0c0;color:#666;cursor:not-allowed}
 .msg.err{background:#fce8e6;color:#a50e0b;display:block}
 .msg.warn{background:#fef7e0;color:#8a5300;display:block}
 .tlist{display:grid;gap:10px}
-.tcard{background:#fff;border-radius:11px;padding:14px;box-shadow:0 1px 3px rgba(0,0,0,.08);cursor:pointer;border-left:5px solid var(--blue);display:flex;justify-content:space-between;align-items:center}
-.tcard .nm{font-weight:700;font-size:15px}
-.tcard .sub{font-size:12px;color:#777;margin-top:3px}
-.tcard .go{color:#999;font-size:20px}
+.tcard{background:#fff;border-radius:11px;padding:14px;box-shadow:0 1px 3px rgba(0,0,0,.08);cursor:pointer;border-left:6px solid var(--blue);display:flex;justify-content:space-between;align-items:center;gap:12px;transition:transform .06s}
+.tcard:hover{transform:translateX(2px);box-shadow:0 2px 7px rgba(0,0,0,.14)}
+.tcard .ico{font-size:24px;line-height:1;flex:none;width:34px;text-align:center}
+.tcard .mid{flex:1;min-width:0}
+.tcard .nm{font-weight:700;font-size:16px}
+.tcard .sub{font-size:12px;color:#5c5c5c;margin-top:3px}
+.tcard .go{color:#8a8a8a;font-size:22px;flex:none}
+/* one colour per feature - each also carries its own icon and label,
+   so colour is a third cue rather than the only one */
+.f-players {background:#e9f1fc;border-left-color:#2a78d6}
+.f-attend  {background:#e6f6ef;border-left-color:#1baf7a}
+.f-pair    {background:#efeafd;border-left-color:#6b4fd8}
+.f-rounds  {background:#fdefe7;border-left-color:#eb6834}
+.f-verify  {background:#e3f3f6;border-left-color:#1596a8}
+.f-report  {background:#fdf6e2;border-left-color:#d99a00}
+.f-stand   {background:#fdeaf2;border-left-color:#d6427f}
+.f-reports {background:#eaecf7;border-left-color:#3b4fa0}
+.f-tools   {background:#fdeaea;border-left-color:#d03b3b}
 .rgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:10px}
 .rbtn{background:#fff;border:2px solid var(--line);border-radius:10px;padding:16px 8px;text-align:center;cursor:pointer;font-weight:700;font-size:15px}
 .rbtn .pc{display:block;font-size:11px;color:#888;font-weight:400;margin-top:4px}
@@ -229,15 +243,15 @@ tr.tickedRow td{background:#f1f8f2;color:#7a7a7a}
     <h2 id="menuTitle"></h2>
     <p class="hint" id="menuSub"></p>
     <div class="tlist">
-      <div class="tcard" data-go="rounds"><div><div class="nm">Rounds &amp; results</div><div class="sub">Enter game results</div></div><div class="go">&#8250;</div></div>
-      <div class="tcard" data-go="attend"><div><div class="nm">Attendance</div><div class="sub">Who has arrived</div></div><div class="go">&#8250;</div></div>
-      <div class="tcard" data-go="verify"><div><div class="nm">Verify scores</div><div class="sub">Second check from the players themselves</div></div><div class="go">&#8250;</div></div>
-    <div class="tcard" data-go="report"><div><div class="nm">Round report</div><div class="sub">Tick off scores as you relay them &middot; print &middot; export</div></div><div class="go">&#8250;</div></div>
-    <div class="tcard" data-go="stand"><div><div class="nm">Standings</div><div class="sub">Scores and ranking</div></div><div class="go">&#8250;</div></div>
-      <div class="tcard admin-only" data-go="players"><div><div class="nm">Players</div><div class="sub">Add or replace the player list</div></div><div class="go">&#8250;</div></div>
-      <div class="tcard admin-only" data-go="pair"><div><div class="nm">Pairings</div><div class="sub">Paste a round from Swiss-Manager</div></div><div class="go">&#8250;</div></div>
-      <div class="tcard admin-only" data-go="reports"><div><div class="nm">Reports</div><div class="sub">Chief arbiter only &middot; crosstable, incidents, audit</div></div><div class="go">&#8250;</div></div>
-    <div class="tcard admin-only" data-go="tools"><div><div class="nm">Reset tools</div><div class="sub">Clear a round or start over</div></div><div class="go">&#8250;</div></div>
+      <div class="tcard f-players admin-only" data-go="players"><div class="ico">👥</div><div class="mid"><div class="nm">Players</div><div class="sub">Add or replace the player list</div></div><div class="go">&#8250;</div></div>
+      <div class="tcard f-attend" data-go="attend"><div class="ico">✅</div><div class="mid"><div class="nm">Attendance</div><div class="sub">Who has arrived</div></div><div class="go">&#8250;</div></div>
+      <div class="tcard f-pair admin-only" data-go="pair"><div class="ico">🔀</div><div class="mid"><div class="nm">Pairings</div><div class="sub">Paste a round from Swiss-Manager</div></div><div class="go">&#8250;</div></div>
+      <div class="tcard f-rounds" data-go="rounds"><div class="ico">♟️</div><div class="mid"><div class="nm">Rounds &amp; results</div><div class="sub">Enter game results</div></div><div class="go">&#8250;</div></div>
+      <div class="tcard f-verify" data-go="verify"><div class="ico">🔍</div><div class="mid"><div class="nm">Verify scores</div><div class="sub">Second check from the players themselves</div></div><div class="go">&#8250;</div></div>
+      <div class="tcard f-report" data-go="report"><div class="ico">📋</div><div class="mid"><div class="nm">Round report</div><div class="sub">Tick off scores as you relay them &middot; print &middot; export</div></div><div class="go">&#8250;</div></div>
+      <div class="tcard f-stand" data-go="stand"><div class="ico">🏆</div><div class="mid"><div class="nm">Standings</div><div class="sub">Scores and ranking</div></div><div class="go">&#8250;</div></div>
+      <div class="tcard f-reports admin-only" data-go="reports"><div class="ico">📊</div><div class="mid"><div class="nm">Reports</div><div class="sub">Chief arbiter only &middot; crosstable, incidents, audit</div></div><div class="go">&#8250;</div></div>
+      <div class="tcard f-tools admin-only" data-go="tools"><div class="ico">⚠️</div><div class="mid"><div class="nm">Reset tools</div><div class="sub">Clear a round or start over</div></div><div class="go">&#8250;</div></div>
     </div>
   </div>
 </div>
@@ -408,7 +422,12 @@ tr.tickedRow td{background:#f1f8f2;color:#7a7a7a}
     <h3>Add a person</h3>
     <label>Name</label><input id="uName" placeholder="Shiju Jacob">
     <label>Username</label><input id="uUser" placeholder="shiju" autocapitalize="none">
-    <label>PIN</label><input id="uPin" type="tel" inputmode="numeric" placeholder="4 digits">
+    <label>PIN</label>
+    <div style="display:flex;gap:8px">
+      <input id="uPin" type="tel" inputmode="numeric" placeholder="5 digits" style="flex:1">
+      <button id="uGenPin" type="button" style="flex:none;width:auto;padding:11px 16px;font-size:14px;font-weight:700;border:1px solid #b9c2cd;border-radius:8px;background:#fff;cursor:pointer">New PIN</button>
+    </div>
+    <p class="hint" style="margin-top:5px">A fresh 5-digit PIN is generated for you. Tap <b>New PIN</b> for another, or type your own.</p>
     <label>Role</label>
     <select id="uRole">
       <option value="Chief">Chief arbiter - full access</option>
@@ -1801,28 +1820,63 @@ $('tlReset').addEventListener('click',function(){
 });
 
 /* ---------- users ---------- */
+var usersCache=[];
+function genPin(){
+  var taken={};usersCache.forEach(function(u){taken[String(u.pin)]=1;});
+  for(var i=0;i<500;i++){
+    var n=String(Math.floor(10000+Math.random()*90000));
+    if(!taken[n])return n;
+  }
+  return String(Math.floor(10000+Math.random()*90000));
+}
+function freshPin(){$('uPin').value=genPin();}
+$('uGenPin').addEventListener('click',freshPin);
+
 function openUsers(){
   clearMsg('uMsg');show('scUsers');
   var box=$('uList');box.innerHTML='<p class="hint">Loading…</p>';
   var u=db.collection(C.users).onSnapshot(function(snap){
     var arr=[];snap.forEach(function(d){arr.push(d.data());});
+    usersCache=arr;
+    if(!$('uPin').value)freshPin();
     arr.sort(function(a,b){return String(a.role).localeCompare(String(b.role))||String(a.username).localeCompare(String(b.username));});
-    var h='<table><tr><th>Name</th><th>Username</th><th>PIN</th><th>Role</th></tr>';
+    var admins=arr.filter(function(x){return x.role==='Chief'||x.role==='Deputy';}).length;
+    var h='<table><tr><th>Name</th><th>Username</th><th>PIN</th><th>Role</th><th class="noprint">Remove</th></tr>';
     arr.forEach(function(v){
-      h+='<tr><td>'+esc(v.name)+'</td><td>'+esc(v.username)+'</td><td>'+esc(v.pin)+'</td><td>'+esc(v.role)+'</td></tr>';
+      var isMe=v.username===me.username;
+      var lastAdmin=(v.role==='Chief'||v.role==='Deputy')&&admins<=1;
+      var why=isMe?'your own account':(lastAdmin?'the only admin left':'');
+      h+='<tr'+(isMe?' class="rowDone"':'')+'>'+
+        '<td>'+esc(v.name)+(isMe?' <span class="stChip good">you</span>':'')+'</td>'+
+        '<td>'+esc(v.username)+'</td><td>'+esc(v.pin)+'</td><td>'+esc(v.role)+'</td>'+
+        '<td class="actCell noprint">'+
+          (why?'<span class="stChip none" title="cannot remove '+why+'">'+why+'</span>'
+              :'<button data-del="'+esc(v.username)+'" class="wd">Remove</button>')+
+        '</td></tr>';
     });
-    h+='</table>';
+    h+='</table><p class="hint" style="margin-top:8px">You cannot remove your own login, or the last remaining admin &mdash; that would lock everyone out.</p>';
     box.innerHTML=h;
   });
   unsub.push(u);
 }
+$('uList').addEventListener('click',function(e){
+  var b=e.target.closest('button[data-del]');if(!b)return;
+  var uname=b.getAttribute('data-del');
+  if(!confirm('Remove the login "'+uname+'"? They will not be able to sign in again.'))return;
+  b.disabled=true;
+  db.collection(C.users).doc(uname).delete()
+    .then(function(){msg('uMsg','Removed '+uname+'.','ok');})
+    .catch(function(err){b.disabled=false;msg('uMsg','Could not remove: '+err.message,'err');});
+});
+
 $('uAddBtn').addEventListener('click',function(){
   var n=$('uName').value.trim(),u=$('uUser').value.trim().toLowerCase(),p=$('uPin').value.trim(),r=$('uRole').value;
   if(!n||!u||!p){msg('uMsg','Fill in name, username and PIN.','err');return;}
   var btn=this;btn.disabled=true;
   db.collection(C.users).doc(u).set({username:u,name:n,pin:p,role:r,active:'Y'}).then(function(){
-    msg('uMsg','Added '+n+' ('+u+' / PIN '+p+')','ok');
-    $('uName').value='';$('uUser').value='';$('uPin').value='';
+    msg('uMsg','Added '+n+' — username '+u+', PIN '+p,'ok');
+    $('uName').value='';$('uUser').value='';
+    freshPin();
     btn.disabled=false;
   }).catch(function(e){msg('uMsg','Error: '+e.message,'err');btn.disabled=false;});
 });
