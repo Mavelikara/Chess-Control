@@ -128,6 +128,14 @@ td.numCell{width:1%;white-space:nowrap;color:#777;font-weight:700}
 .plrow.isWd .nm{text-decoration:line-through;color:#999}
 .wdBox{background:#fff6f6;border:1px solid #f3c0be;border-radius:10px;padding:12px;margin-bottom:12px}
 .wdBox h3{color:var(--red);margin:0 0 6px}
+.roleBoxes{display:grid;gap:7px;margin-top:4px}
+.rbox{display:flex;align-items:center;gap:9px;padding:9px 11px;border:1px solid #ccd3db;border-radius:8px;background:#fff;font-size:14px;cursor:pointer;font-weight:400;margin:0}
+.rbox input{width:18px;height:18px;flex:none;margin:0}
+.rbox b{font-weight:700}
+.rbox span{color:#777;font-size:12px}
+.rbox:has(input:checked){background:#e9f1fc;border-color:#2a78d6}
+.roleChip{display:inline-block;background:#eef2f8;color:#33405a;font-size:11px;font-weight:700;padding:2px 7px;border-radius:4px;margin:1px 3px 1px 0}
+.roleChip.adm{background:#e9f1fc;color:#1a4c8f}
 .flagBtns{display:flex;gap:8px;margin-top:10px}
 .flagBtnW{flex:1;padding:11px 8px;font-size:13px;font-weight:700;border:1px solid var(--amber);border-radius:8px;background:#fff8e8;color:#b34000;cursor:pointer}
 .flagBtnB{flex:1;padding:11px 8px;font-size:13px;font-weight:700;border:1px solid #e57373;border-radius:8px;background:#fce4e4;color:#7f0000;cursor:pointer}
@@ -201,8 +209,12 @@ tr.tickedRow td{background:#f1f8f2;color:#7a7a7a}
     <input id="fsName" placeholder="Anitha Rajendran">
     <label>Username (lowercase, no spaces)</label>
     <input id="fsUser" placeholder="anitha" autocapitalize="none">
-    <label>PIN (4 digits)</label>
-    <input id="fsPin" type="tel" inputmode="numeric" placeholder="9001">
+    <label>PIN</label>
+    <div style="display:flex;gap:8px">
+      <input id="fsPin" type="tel" inputmode="numeric" placeholder="5 digits" style="flex:1">
+      <button id="fsGenPin" type="button" style="flex:none;width:auto;padding:11px 16px;font-size:14px;font-weight:700;border:1px solid #b9c2cd;border-radius:8px;background:#fff;cursor:pointer">New PIN</button>
+    </div>
+    <p class="hint" style="margin-top:5px">A 5-digit PIN has been generated for you. Write it down &mdash; you will need it to sign in.</p>
     <button class="btn green" id="fsBtn">Create account</button>
     <div class="msg" id="fsMsg"></div>
   </div>
@@ -428,20 +440,40 @@ tr.tickedRow td{background:#f1f8f2;color:#7a7a7a}
       <button id="uGenPin" type="button" style="flex:none;width:auto;padding:11px 16px;font-size:14px;font-weight:700;border:1px solid #b9c2cd;border-radius:8px;background:#fff;cursor:pointer">New PIN</button>
     </div>
     <p class="hint" style="margin-top:5px">A fresh 5-digit PIN is generated for you. Tap <b>New PIN</b> for another, or type your own.</p>
-    <label>Role</label>
-    <select id="uRole">
-      <option value="Chief">Chief arbiter - full access</option>
-      <option value="Deputy">Deputy - full access</option>
-      <option value="Arbiter">Floor arbiter - results and attendance</option>
-      <option value="Verifier">Score verifier - checks results independently</option>
-      <option value="Attendance">Attendance desk only</option>
-    </select>
+    <label>Roles &mdash; tick as many as apply</label>
+    <div id="uRoleBoxes" class="roleBoxes">
+      <label class="rbox"><input type="checkbox" value="Chief"> <b>Chief arbiter</b><span>full access</span></label>
+      <label class="rbox"><input type="checkbox" value="Deputy"> <b>Deputy</b><span>full access</span></label>
+      <label class="rbox"><input type="checkbox" value="Arbiter" checked> <b>Floor arbiter</b><span>enter results</span></label>
+      <label class="rbox"><input type="checkbox" value="Verifier"> <b>Score verifier</b><span>second check</span></label>
+      <label class="rbox"><input type="checkbox" value="Attendance"> <b>Attendance desk</b><span>who has arrived</span></label>
+    </div>
     <button class="btn green" id="uAddBtn">Add person</button>
     <div class="msg" id="uMsg"></div>
   </div>
 </div>
 
 </div><!-- /wrap -->
+
+<!-- ROLE EDIT MODAL -->
+<div id="roleModalBack" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:50;align-items:center;justify-content:center;padding:14px">
+  <div class="modal">
+    <h3 id="rmTitle"></h3>
+    <div class="msub" id="rmSub"></div>
+    <div id="rmBoxes" class="roleBoxes">
+      <label class="rbox"><input type="checkbox" value="Chief"> <b>Chief arbiter</b><span>full access</span></label>
+      <label class="rbox"><input type="checkbox" value="Deputy"> <b>Deputy</b><span>full access</span></label>
+      <label class="rbox"><input type="checkbox" value="Arbiter"> <b>Floor arbiter</b><span>enter results</span></label>
+      <label class="rbox"><input type="checkbox" value="Verifier"> <b>Score verifier</b><span>second check</span></label>
+      <label class="rbox"><input type="checkbox" value="Attendance"> <b>Attendance desk</b><span>who has arrived</span></label>
+    </div>
+    <div class="msg" id="rmMsg"></div>
+    <div class="row2" style="margin-top:12px">
+      <button class="btn grey" id="rmCancel" style="margin:0">Cancel</button>
+      <button class="btn green" id="rmSave" style="margin:0">Save roles</button>
+    </div>
+  </div>
+</div>
 
 <!-- VERIFY MODAL -->
 <div id="vModalBack" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:50;align-items:center;justify-content:center;padding:14px">
@@ -626,7 +658,7 @@ loadFirebase().then(function(src){
   if(saved){me=saved;afterLogin();return;}
   window.__bootStage='reading the accounts list';
   return db.collection(C.users).limit(1).get().then(function(s){
-    if(s.empty)show('scFirst'); else show('scLogin');
+    if(s.empty){$('fsPin').value=genPin5();show('scFirst');} else show('scLogin');
   });
 }).catch(function(e){
   var m=(e&&e.message)||String(e);
@@ -637,12 +669,13 @@ loadFirebase().then(function(src){
 });
 
 /* ---------- first run ---------- */
+$('fsGenPin').addEventListener('click',function(){$('fsPin').value=genPin5();});
 $('fsBtn').addEventListener('click',function(){
   var n=$('fsName').value.trim(),u=$('fsUser').value.trim().toLowerCase(),p=$('fsPin').value.trim();
   if(!n||!u||!p){msg('fsMsg','Fill in all three fields.','err');return;}
   this.disabled=true;
-  db.collection(C.users).doc(u).set({username:u,name:n,role:'Chief',pin:p,active:'Y'})
-   .then(function(){me={username:u,name:n,role:'Chief'};localStorage.setItem('cc_user',JSON.stringify(me));afterLogin();})
+  db.collection(C.users).doc(u).set({username:u,name:n,role:'Chief',roles:['Chief'],pin:p,active:'Y'})
+   .then(function(){me={username:u,name:n,role:'Chief',roles:['Chief']};localStorage.setItem('cc_user',JSON.stringify(me));afterLogin();})
    .catch(function(e){msg('fsMsg','Error: '+e.message,'err');$('fsBtn').disabled=false;});
 });
 
@@ -656,7 +689,7 @@ function doLogin(){
     var v=d.data();
     if(String(v.pin)!==p){msg('loginMsg','Wrong PIN.','err');$('loginBtn').disabled=false;return;}
     if(v.active==='N'){msg('loginMsg','This account is switched off.','err');$('loginBtn').disabled=false;return;}
-    me={username:v.username,name:v.name,role:v.role};
+    me={username:v.username,name:v.name,role:v.role,roles:rolesOf(v)};
     localStorage.setItem('cc_user',JSON.stringify(me));
     clearMsg('loginMsg');$('loginBtn').disabled=false;
     afterLogin();
@@ -671,10 +704,30 @@ $('logoutBtn').addEventListener('click',function(){
   show('scLogin');
 });
 
-function isAdmin(){return me&&(me.role==='Chief'||me.role==='Deputy');}
+/* A person can hold several roles. Older accounts stored a single `role`
+   string, so read both and treat them the same. */
+function rolesOf(u){
+  if(!u)return [];
+  if(Array.isArray(u.roles)&&u.roles.length)return u.roles;
+  return u.role?[u.role]:[];
+}
+function hasRole(r,u){return rolesOf(u||me).indexOf(r)!==-1;}
+function isAdminOf(u){return hasRole('Chief',u)||hasRole('Deputy',u);}
+function isAdmin(){return !!me&&isAdminOf(me);}
+function roleLabel(r){
+  return {Chief:'Chief arbiter',Deputy:'Deputy',Arbiter:'Floor arbiter',
+          Verifier:'Score verifier',Attendance:'Attendance desk'}[r]||r;
+}
+function roleChips(u){
+  var rs=rolesOf(u);
+  if(!rs.length)return '<span class="stChip none">no role</span>';
+  return rs.map(function(r){
+    return '<span class="roleChip'+(r==='Chief'||r==='Deputy'?' adm':'')+'">'+esc(roleLabel(r))+'</span>';
+  }).join('');
+}
 
 function afterLogin(){
-  $('whoLabel').textContent=me.name+' ('+me.role+')';
+  $('whoLabel').textContent=me.name+' ('+rolesOf(me).map(roleLabel).join(', ')+')';
   $('logoutBtn').style.display='inline-block';
   openHome();
 }
@@ -755,9 +808,12 @@ function openTournament(t){
   $('menuSub').textContent=(t.date||'')+' · '+t.rounds+' rounds'+
     (t.playerCount?' · '+t.playerCount+' players · '+t.boards+' boards':' · players not added yet');
   document.querySelectorAll('.admin-only').forEach(function(el){el.style.display=isAdmin()?'flex':'none';});
+  var vCard=document.querySelector('[data-go="verify"]');
+  if(vCard)vCard.style.display=(isAdmin()||hasRole('Verifier'))?'flex':'none';
   navStack=[openHome];setNav('Tournaments');setCtx(null);
-  if(me.role==='Attendance'){openAttendance();return;}
-  if(me.role==='Verifier'){openVerify();return;}
+  var rs=rolesOf(me);
+  if(rs.length===1&&rs[0]==='Attendance'){openAttendance();return;}
+  if(rs.length===1&&rs[0]==='Verifier'){openVerify();return;}
   show('scMenu');
 }
 $('scMenu').addEventListener('click',function(e){
@@ -1820,6 +1876,7 @@ $('tlReset').addEventListener('click',function(){
 });
 
 /* ---------- users ---------- */
+function genPin5(){return String(Math.floor(10000+Math.random()*90000));}
 var usersCache=[];
 function genPin(){
   var taken={};usersCache.forEach(function(u){taken[String(u.pin)]=1;});
@@ -1840,17 +1897,18 @@ function openUsers(){
     usersCache=arr;
     if(!$('uPin').value)freshPin();
     arr.sort(function(a,b){return String(a.role).localeCompare(String(b.role))||String(a.username).localeCompare(String(b.username));});
-    var admins=arr.filter(function(x){return x.role==='Chief'||x.role==='Deputy';}).length;
-    var h='<table><tr><th>Name</th><th>Username</th><th>PIN</th><th>Role</th><th class="noprint">Remove</th></tr>';
+    var admins=arr.filter(isAdminOf).length;
+    var h='<table><tr><th>Name</th><th>Username</th><th>PIN</th><th>Roles</th><th class="noprint">Change</th></tr>';
     arr.forEach(function(v){
       var isMe=v.username===me.username;
-      var lastAdmin=(v.role==='Chief'||v.role==='Deputy')&&admins<=1;
+      var lastAdmin=isAdminOf(v)&&admins<=1;
       var why=isMe?'your own account':(lastAdmin?'the only admin left':'');
       h+='<tr'+(isMe?' class="rowDone"':'')+'>'+
         '<td>'+esc(v.name)+(isMe?' <span class="stChip good">you</span>':'')+'</td>'+
-        '<td>'+esc(v.username)+'</td><td>'+esc(v.pin)+'</td><td>'+esc(v.role)+'</td>'+
+        '<td>'+esc(v.username)+'</td><td>'+esc(v.pin)+'</td><td>'+roleChips(v)+'</td>'+
         '<td class="actCell noprint">'+
-          (why?'<span class="stChip none" title="cannot remove '+why+'">'+why+'</span>'
+          '<button data-roles="'+esc(v.username)+'">Roles</button>'+
+          (why?'<span class="stChip none" style="margin-left:5px" title="cannot remove '+why+'">'+why+'</span>'
               :'<button data-del="'+esc(v.username)+'" class="wd">Remove</button>')+
         '</td></tr>';
     });
@@ -1859,7 +1917,25 @@ function openUsers(){
   });
   unsub.push(u);
 }
+var rmUser=null;
 $('uList').addEventListener('click',function(e){
+  var rb=e.target.closest('button[data-roles]');
+  if(rb){
+    var un=rb.getAttribute('data-roles');
+    db.collection(C.users).doc(un).get().then(function(d){
+      if(!d.exists)return;
+      rmUser=d.data();
+      $('rmTitle').textContent=rmUser.name;
+      $('rmSub').textContent='Username '+rmUser.username+' — tick every role this person needs';
+      var have=rolesOf(rmUser);
+      document.querySelectorAll('#rmBoxes input[type=checkbox]').forEach(function(c){
+        c.checked=have.indexOf(c.value)!==-1;
+      });
+      clearMsg('rmMsg');
+      $('roleModalBack').style.display='flex';
+    });
+    return;
+  }
   var b=e.target.closest('button[data-del]');if(!b)return;
   var uname=b.getAttribute('data-del');
   if(!confirm('Remove the login "'+uname+'"? They will not be able to sign in again.'))return;
@@ -1869,12 +1945,48 @@ $('uList').addEventListener('click',function(e){
     .catch(function(err){b.disabled=false;msg('uMsg','Could not remove: '+err.message,'err');});
 });
 
-$('uAddBtn').addEventListener('click',function(){
-  var n=$('uName').value.trim(),u=$('uUser').value.trim().toLowerCase(),p=$('uPin').value.trim(),r=$('uRole').value;
-  if(!n||!u||!p){msg('uMsg','Fill in name, username and PIN.','err');return;}
+function boxedRoles(containerId){
+  var out=[];
+  document.querySelectorAll('#'+containerId+' input[type=checkbox]').forEach(function(c){
+    if(c.checked)out.push(c.value);
+  });
+  return out;
+}
+function closeRoleModal(){$('roleModalBack').style.display='none';rmUser=null;}
+$('rmCancel').addEventListener('click',closeRoleModal);
+$('roleModalBack').addEventListener('click',function(e){if(e.target===this)closeRoleModal();});
+$('rmSave').addEventListener('click',function(){
+  if(!rmUser)return;
+  var rs=boxedRoles('rmBoxes');
+  if(!rs.length){msg('rmMsg','Tick at least one role.','err');return;}
+  var wasAdmin=isAdminOf(rmUser);
+  var stillAdmin=rs.indexOf('Chief')!==-1||rs.indexOf('Deputy')!==-1;
+  var otherAdmins=usersCache.filter(function(x){return x.username!==rmUser.username&&isAdminOf(x);}).length;
+  if(wasAdmin&&!stillAdmin&&otherAdmins===0){
+    msg('rmMsg','This is the only admin account. Give someone else Chief or Deputy first, or nobody will be able to manage the tournament.','err');
+    return;
+  }
   var btn=this;btn.disabled=true;
-  db.collection(C.users).doc(u).set({username:u,name:n,pin:p,role:r,active:'Y'}).then(function(){
-    msg('uMsg','Added '+n+' — username '+u+', PIN '+p,'ok');
+  var un=rmUser.username;
+  db.collection(C.users).doc(un).set({role:rs[0],roles:rs},{merge:true}).then(function(){
+    if(un===me.username){
+      me.roles=rs;me.role=rs[0];
+      localStorage.setItem('cc_user',JSON.stringify(me));
+      $('whoLabel').textContent=me.name+' ('+rs.map(roleLabel).join(', ')+')';
+    }
+    msg('uMsg','Roles updated for '+un+' — '+rs.map(roleLabel).join(', '),'ok');
+    btn.disabled=false;closeRoleModal();
+  }).catch(function(err){msg('rmMsg','Could not save: '+err.message,'err');btn.disabled=false;});
+});
+
+$('uAddBtn').addEventListener('click',function(){
+  var n=$('uName').value.trim(),u=$('uUser').value.trim().toLowerCase(),p=$('uPin').value.trim();
+  var rs=boxedRoles('uRoleBoxes');
+  if(!n||!u||!p){msg('uMsg','Fill in name, username and PIN.','err');return;}
+  if(!rs.length){msg('uMsg','Tick at least one role.','err');return;}
+  var btn=this;btn.disabled=true;
+  db.collection(C.users).doc(u).set({username:u,name:n,pin:p,role:rs[0],roles:rs,active:'Y'}).then(function(){
+    msg('uMsg','Added '+n+' — username '+u+', PIN '+p+' — '+rs.map(roleLabel).join(', '),'ok');
     $('uName').value='';$('uUser').value='';
     freshPin();
     btn.disabled=false;
