@@ -288,8 +288,16 @@ tr.tickedRow td{background:#f1f8f2;color:#7a7a7a}
 <div class="screen" id="scPlayers">
   <div class="card">
     <h2 id="plHeading">Players</h2>
-    <p class="hint">One name per line. This replaces the whole list for this tournament. Do this before importing pairings.</p>
+    <p class="hint" id="plCount"></p>
+    <div style="background:#e9f1fc;border:1px solid #b6cff0;border-radius:10px;padding:12px;margin-bottom:14px">
+      <label style="margin-top:0">Add more players &mdash; one name per line</label>
+      <textarea id="plAdd" style="min-height:74px" placeholder="Type or paste the new names here"></textarea>
+      <button class="btn" id="plAddBtn" style="background:#2a78d6">Add these to the list</button>
+      <p class="hint" style="margin:8px 0 0">This adds to the list below. Nobody already on it is removed, and everyone keeps their attendance mark.</p>
+    </div>
+    <label>Full list &mdash; edit directly if you need to</label>
     <textarea id="plPaste" placeholder="Eden George Eldho&#10;David Boney Varghese&#10;Adel Joseph"></textarea>
+    <p class="hint">Everyone currently on the list is already in this box. Delete a line to remove that player.</p>
     <button class="btn" id="plCheckBtn">Check list</button>
     <div id="plPreview"></div>
     <button class="btn green" id="plSaveBtn" style="display:none">Save player list</button>
@@ -853,15 +861,44 @@ $('usersBtn').addEventListener('click',function(){
 
 /* ---------- players ---------- */
 var plParsed=[];
+function plCountLine(){
+  var n=$('plPaste').value.split(/\r?\n/).map(function(x){return x.trim();}).filter(Boolean).length;
+  $('plCount').innerHTML=n
+    ? '<b>'+n+'</b> player'+(n===1?'':'s')+' on the list at the moment.'
+    : 'No players on the list yet.';
+}
 function openPlayers(){
-  setCtx(null,'PLAYERS');$('plHeading').textContent=T.name+' — Players';clearMsg('plMsg');$('plPreview').innerHTML='';$('plSaveBtn').style.display='none';
+  setCtx(null,'PLAYERS');$('plHeading').textContent=T.name+' — Players';clearMsg('plMsg');
+  $('plPreview').innerHTML='';$('plSaveBtn').style.display='none';$('plAdd').value='';
   show('scPlayers');
   db.collection(C.players).where('tournament','==',T.code).get().then(function(s){
     var names=[];s.forEach(function(d){names.push(d.data());});
     names.sort(function(a,b){return (a.seed||0)-(b.seed||0);});
-    if(names.length)$('plPaste').value=names.map(function(p){return p.name;}).join('\n');
+    $('plPaste').value=names.length?names.map(function(p){return p.name;}).join('\n'):'';
+    plCountLine();
   });
 }
+$('plPaste').addEventListener('input',plCountLine);
+$('plAddBtn').addEventListener('click',function(){
+  var add=$('plAdd').value.split(/\r?\n/)
+    .map(function(x){return x.replace(/^\d+[\s.)\-:]+/,'').trim();})
+    .filter(Boolean);
+  if(!add.length){msg('plMsg','Type the new names in the box above first.','err');return;}
+  var cur=$('plPaste').value.split(/\r?\n/).map(function(x){return x.trim();}).filter(Boolean);
+  var lower={};cur.forEach(function(n){lower[n.toLowerCase()]=1;});
+  var added=[],dupes=[];
+  add.forEach(function(n){
+    if(lower[n.toLowerCase()]){dupes.push(n);return;}
+    lower[n.toLowerCase()]=1;cur.push(n);added.push(n);
+  });
+  $('plPaste').value=cur.join('\n');
+  $('plAdd').value='';
+  plCountLine();
+  var m=added.length?'Added '+added.length+' name'+(added.length===1?'':'s')+': '+added.join(', '):'Nothing new to add.';
+  if(dupes.length)m+='\n\nAlready on the list, so skipped: '+dupes.join(', ');
+  m+='\n\nNow press "Check list", then "Save player list" to store it.';
+  msg('plMsg',m,added.length?'ok':'warn');
+});
 $('plCheckBtn').addEventListener('click',function(){
   var lines=$('plPaste').value.split(/\r?\n/).map(function(s){return s.trim();}).filter(Boolean);
   // strip a leading number if present ("1 Eden George" -> "Eden George")
