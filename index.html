@@ -141,6 +141,8 @@ td.numCell{width:1%;white-space:nowrap;color:#777;font-weight:700}
 .plrow button{padding:8px 12px;font-size:12px;font-weight:700;border-radius:7px;border:1px solid #ccc;background:#fff;cursor:pointer}
 .plrow button.on{background:var(--green);color:#fff;border-color:var(--green)}
 .plrow button.wd{background:#c5221f;color:#fff;border-color:#c5221f}
+th.sortTh{cursor:pointer;user-select:none}
+th.sortTh:hover{filter:brightness(1.15)}
 .plrow.isWd .nm{text-decoration:line-through;color:#999}
 .wdBox{background:#fff6f6;border:1px solid #f3c0be;border-radius:10px;padding:12px;margin-bottom:12px}
 .wdBox h3{color:var(--red);margin:0 0 6px}
@@ -298,7 +300,13 @@ tr.tickedRow td{background:#f1f8f2;color:#7a7a7a}
     <label>Full list &mdash; edit directly if you need to</label>
     <textarea id="plPaste" placeholder="Eden George Eldho&#10;David Boney Varghese&#10;Adel Joseph"></textarea>
     <p class="hint">Everyone currently on the list is already in this box. Delete a line to remove that player.</p>
-    <button class="btn" id="plCheckBtn">Check list</button>
+    <div class="row2">
+      <button class="btn grey" id="plSortBtn" style="margin:0">Sort A &ndash; Z</button>
+      <button class="btn" id="plCheckBtn" style="margin:0">Check list</button>
+    </div>
+    <label style="margin-top:16px">Find a player</label>
+    <input id="plSearch" placeholder="Type any part of a name">
+    <div id="plView"></div>
     <div id="plPreview"></div>
     <button class="btn green" id="plSaveBtn" style="display:none">Save player list</button>
     <div class="msg" id="plMsg"></div>
@@ -869,16 +877,42 @@ function plCountLine(){
 }
 function openPlayers(){
   setCtx(null,'PLAYERS');$('plHeading').textContent=T.name+' — Players';clearMsg('plMsg');
-  $('plPreview').innerHTML='';$('plSaveBtn').style.display='none';$('plAdd').value='';
+  $('plPreview').innerHTML='';$('plSaveBtn').style.display='none';$('plAdd').value='';$('plSearch').value='';
   show('scPlayers');
   db.collection(C.players).where('tournament','==',T.code).get().then(function(s){
     var names=[];s.forEach(function(d){names.push(d.data());});
     names.sort(function(a,b){return (a.seed||0)-(b.seed||0);});
     $('plPaste').value=names.length?names.map(function(p){return p.name;}).join('\n'):'';
-    plCountLine();
+    plCountLine();plRender();
   });
 }
-$('plPaste').addEventListener('input',plCountLine);
+/* A readable, searchable view of the list - the edit box is for typing,
+   this is for finding someone among 50+ names. */
+function plRender(){
+  var names=$('plPaste').value.split(/\r?\n/).map(function(x){return x.trim();}).filter(Boolean);
+  var q=$('plSearch').value.trim().toLowerCase();
+  var rows=names.map(function(n,i){return {n:n,i:i+1};});
+  if(q)rows=rows.filter(function(r){return r.n.toLowerCase().indexOf(q)!==-1;});
+  var box=$('plView');
+  if(!names.length){box.innerHTML='';return;}
+  if(!rows.length){box.innerHTML='<p class="hint">No name matches &ldquo;'+esc(q)+'&rdquo;.</p>';return;}
+  var h='<p class="hint" style="margin:10px 0 0">'+(q?rows.length+' of '+names.length+' shown':names.length+' players')+'</p>'+
+    '<table><tr><th>#</th><th>Player</th></tr>';
+  rows.forEach(function(r){
+    h+='<tr><td class="numCell">'+r.i+'</td><td>'+esc(r.n)+'</td></tr>';
+  });
+  box.innerHTML=h+'</table>';
+}
+$('plSearch').addEventListener('input',plRender);
+$('plSortBtn').addEventListener('click',function(){
+  var names=$('plPaste').value.split(/\r?\n/).map(function(x){return x.trim();}).filter(Boolean);
+  if(!names.length){msg('plMsg','There are no names to sort yet.','warn');return;}
+  names.sort(function(a,b){return a.localeCompare(b,undefined,{sensitivity:'base'});});
+  $('plPaste').value=names.join('\n');
+  plCountLine();plRender();
+  msg('plMsg','List sorted A to Z. Press "Check list" then "Save player list" to keep the new order.','ok');
+});
+$('plPaste').addEventListener('input',function(){plCountLine();plRender();});
 $('plAddBtn').addEventListener('click',function(){
   var add=$('plAdd').value.split(/\r?\n/)
     .map(function(x){return x.replace(/^\d+[\s.)\-:]+/,'').trim();})
@@ -893,7 +927,7 @@ $('plAddBtn').addEventListener('click',function(){
   });
   $('plPaste').value=cur.join('\n');
   $('plAdd').value='';
-  plCountLine();
+  plCountLine();plRender();
   var m=added.length?'Added '+added.length+' name'+(added.length===1?'':'s')+': '+added.join(', '):'Nothing new to add.';
   if(dupes.length)m+='\n\nAlready on the list, so skipped: '+dupes.join(', ');
   m+='\n\nNow press "Check list", then "Save player list" to store it.';
@@ -1238,6 +1272,12 @@ $('modalBack').addEventListener('click',function(e){if(e.target===this)closeModa
 function closeModal(){$('modalBack').classList.remove('on');activeGame=null;}
 
 /* ---------- attendance ---------- */
+var atSort='name';
+$('atList').addEventListener('click',function(e){
+  var th=e.target.closest('.sortTh');if(!th)return;
+  atSort=th.getAttribute('data-sort');
+  openAttendance();
+});
 function openAttendance(){
   detach();setCtx(null,'ATTENDANCE');$('atHeading').textContent=T.name+' — Attendance';show('scAttend');
   var list=$('atList');list.innerHTML='<p class="hint">Loading…</p>';
@@ -1260,11 +1300,18 @@ function openAttendance(){
       box.innerHTML=h+'</div>';
     } else box.innerHTML='';
 
-    var h='<table><tr><th>#</th><th>Player</th><th>Status</th><th class="noprint">Mark</th></tr>';
+    if(atSort==='name')arr.sort(function(a,b){return a.name.localeCompare(b.name,undefined,{sensitivity:'base'});});
+    else if(atSort==='status')arr.sort(function(a,b){
+      var rank=function(x){return x.withdrawn?2:(x.present?0:1);};
+      return rank(a)-rank(b)||a.name.localeCompare(b.name);
+    });
+    var arrow=function(k){return atSort===k?' &#9660;':'';};
+    var h='<table><tr><th class="sortTh" data-sort="name">Player'+arrow('name')+'</th>'+
+      '<th class="sortTh" data-sort="status">Status'+arrow('status')+'</th>'+
+      '<th class="noprint">Mark</th></tr>';
     arr.forEach(function(p,i){
       var cls=p.withdrawn?'rowWithdrew':(p.present?'rowPresent':'');
       h+='<tr class="'+cls+'">'+
-        '<td class="numCell">'+(i+1)+'</td>'+
         '<td>'+esc(p.name)+'</td>'+
         '<td>'+(p.withdrawn?'<span class="stChip crit">&#9873; WITHDREW</span>'
               :(p.present?'<span class="stChip good">&#10003; arrived</span>'
